@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createProject } from '../../api/projects';
 import type { Project } from '../../types/api';
+import { Alert } from '../feedback/Alert';
 
 type CreateProjectFormProps = {
     onCreated: (project: Project) => void;
