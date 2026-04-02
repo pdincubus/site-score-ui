@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 function App() {
     return (
@@ -29,6 +30,7 @@ function App() {
                         }
                     />
                     <Route path='/' element={<Navigate to='/projects' replace />} />
+                    <Route path='*' element={<NotFoundPage />} />
                 </Routes>
             </AppShell>
         </AuthProvider>

@@ -9,6 +9,11 @@ type GetProjectsOptions = {
     order?: 'asc' | 'desc';
 };
 
+type CreateProjectInput = {
+    name: string;
+    url: string;
+};
+
 function buildQuery(params: Record<string, string | number | undefined>) {
     const searchParams = new URLSearchParams();
 
@@ -45,4 +50,11 @@ function getProjectReports(id: string, page = 1, limit = 10) {
     return apiFetch<PaginatedResponse<Report>>(`/projects/${id}/reports${query}`);
 }
 
-export { getProjects, getProjectById, getProjectReports };
+function createProject(input: CreateProjectInput) {
+    return apiFetch<Project>('/projects', {
+        method: 'POST',
+        bodyJson: input
+    });
+}
+
+export { getProjects, getProjectById, getProjectReports, createProject };

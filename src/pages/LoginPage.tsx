@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext'
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+
 
 function LoginPage() {
     const navigate = useNavigate();
@@ -14,6 +16,8 @@ function LoginPage() {
     if (!isLoading && isAuthenticated) {
         return <Navigate to='/projects' replace />;
     }
+
+    useDocumentTitle('Log in | Site Score UI')
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();

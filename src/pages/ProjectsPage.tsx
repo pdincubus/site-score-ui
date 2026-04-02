@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getProjects } from '../api/projects';
+import { CreateProjectForm } from '../components/projects/CreateProjectForm';
 import type { PaginatedResponse, Project } from '../types/api';
 
 function ProjectsPage() {
@@ -8,6 +9,7 @@ function ProjectsPage() {
     const [response, setResponse] = useState<PaginatedResponse<Project> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [reloadKey, setReloadKey] = useState(0);
 
     const page = Number(searchParams.get('page') || '1');
     const limit = Number(searchParams.get('limit') || '10');
@@ -15,30 +17,30 @@ function ProjectsPage() {
     const sort = (searchParams.get('sort') || 'createdAt') as 'createdAt' | 'name';
     const order = (searchParams.get('order') || 'desc') as 'asc' | 'desc';
 
-    useEffect(() => {
-        async function loadProjects() {
-            setIsLoading(true);
-            setError('');
+    const loadProjects = useCallback(async () => {
+        setIsLoading(true);
+        setError('');
 
-            try {
-                const data = await getProjects({
-                    page,
-                    limit,
-                    search,
-                    sort,
-                    order
-                });
+        try {
+            const data = await getProjects({
+                page,
+                limit,
+                search,
+                sort,
+                order
+            });
 
-                setResponse(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load projects');
-            } finally {
-                setIsLoading(false);
-            }
+            setResponse(data);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load projects');
+        } finally {
+            setIsLoading(false);
         }
-
-        void loadProjects();
     }, [page, limit, search, sort, order]);
+
+    useEffect(() => {
+        void loadProjects();
+    }, [loadProjects, reloadKey]);
 
     function updateQuery(next: Record<string, string>) {
         const params = new URLSearchParams(searchParams);
@@ -54,12 +56,18 @@ function ProjectsPage() {
         setSearchParams(params);
     }
 
+    function handleProjectCreated() {
+        setReloadKey((value) => value + 1);
+    }
+
     return (
         <section className='page'>
             <div className='page-heading'>
                 <h1>Projects</h1>
                 <p>Browse projects from the Site Score API.</p>
             </div>
+
+            <CreateProjectForm onCreated={handleProjectCreated} />
 
             <div className='card'>
                 <div className='toolbar'>

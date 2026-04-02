@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getProjectById, getProjectReports } from '../api/projects';
 import type { PaginatedResponse, Project, Report } from '../types/api';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+
 
 function ProjectDetailPage() {
     const { id = '' } = useParams();
@@ -39,6 +41,8 @@ function ProjectDetailPage() {
             void loadProjectData();
         }
     }, [id, page, limit]);
+
+    useDocumentTitle(project ? `${project.name} | Site Score UI` : 'Project | Site Score UI');
 
     function setPage(nextPage: number) {
         const params = new URLSearchParams(searchParams);
