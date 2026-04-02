@@ -6,6 +6,7 @@ import { Loading } from '../components/feedback/Loading';
 import { CreateProjectForm } from '../components/projects/CreateProjectForm';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import type { PaginatedResponse, Project } from '../types/api';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 function ProjectsPage() {
     useDocumentTitle('Projects | Site Score UI');
@@ -16,7 +17,9 @@ function ProjectsPage() {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
+    const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
 
+    const debouncedSearch = useDebouncedValue(searchInput, 300);
     const page = Number(searchParams.get('page') || '1');
     const limit = Number(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
@@ -45,6 +48,21 @@ function ProjectsPage() {
     }, [page, limit, search, sort, order]);
 
     useEffect(() => {
+        setSearchInput(search);
+    }, [search]);
+
+    useEffect(() => {
+        if (debouncedSearch === search) {
+            return;
+        }
+    
+        updateQuery({
+            search: debouncedSearch,
+            page: '1'
+        });
+    }, [debouncedSearch, search]);
+
+    useEffect(() => {
         void loadProjects();
     }, [loadProjects, reloadKey]);
 
@@ -61,6 +79,10 @@ function ProjectsPage() {
 
         setSearchParams(params);
     }
+
+    useEffect(() => {
+        setSuccessMessage('');
+    }, [search, sort, order, page]);
 
     function handleProjectCreated(project: Project) {
         setSuccessMessage(`Project created: ${project.name}`);
@@ -88,13 +110,8 @@ function ProjectsPage() {
                         <span>Search</span>
                         <input
                             type='text'
-                            value={search}
-                            onChange={(event) =>
-                                updateQuery({
-                                    search: event.target.value,
-                                    page: '1'
-                                })
-                            }
+                            value={searchInput}
+                            onChange={(event) => setSearchInput(event.target.value)}
                             placeholder='Search name or URL'
                         />
                     </label>

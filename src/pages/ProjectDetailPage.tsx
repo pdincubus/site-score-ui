@@ -7,6 +7,7 @@ import { EditProjectForm } from '../components/projects/EditProjectForm';
 import { CreateReportForm } from '../components/reports/CreateReportForm';
 import { EditReportForm } from '../components/reports/EditReportForm';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { PaginatedResponse, Project, Report } from '../types/api';
 
 function ProjectDetailPage() {
@@ -21,9 +22,14 @@ function ProjectDetailPage() {
     const [successMessage, setSuccessMessage] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
     const [editingReportId, setEditingReportId] = useState<string | null>(null);
+    const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
 
+    const debouncedSearch = useDebouncedValue(searchInput, 300);
     const page = Number(searchParams.get('page') || '1');
     const limit = Number(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const sort = (searchParams.get('sort') || 'createdAt') as 'createdAt' | 'title';
+    const order = (searchParams.get('order') || 'desc') as 'asc' | 'desc';
 
     useDocumentTitle(project ? `${project.name} | Site Score UI` : 'Project | Site Score UI');
 
@@ -31,13 +37,19 @@ function ProjectDetailPage() {
         async function loadProjectData() {
             setIsLoading(true);
             setError('');
-
+    
             try {
                 const [projectData, reportData] = await Promise.all([
                     getProjectById(id),
-                    getProjectReports(id, page, limit)
+                    getProjectReports(id, {
+                        page,
+                        limit,
+                        search,
+                        sort,
+                        order
+                    })
                 ]);
-
+    
                 setProject(projectData);
                 setReports(reportData);
             } catch (err) {
@@ -46,11 +58,30 @@ function ProjectDetailPage() {
                 setIsLoading(false);
             }
         }
-
+    
         if (id) {
             void loadProjectData();
         }
-    }, [id, page, limit, reloadKey]);
+    }, [id, page, limit, search, sort, order, reloadKey]);
+
+    useEffect(() => {
+        setSearchInput(search);
+    }, [search]);
+
+    useEffect(() => {
+        if (debouncedSearch === search) {
+            return;
+        }
+    
+        updateQuery({
+            search: debouncedSearch,
+            page: '1'
+        });
+    }, [debouncedSearch, search, searchParams]);
+
+    useEffect(() => {
+        setSuccessMessage('');
+    }, [search, sort, order, page]);
 
     function setPage(nextPage: number) {
         const params = new URLSearchParams(searchParams);
@@ -113,6 +144,20 @@ function ProjectDetailPage() {
         setSuccessMessage('Report deleted successfully');
     }
 
+    function updateQuery(next: Record<string, string>) {
+        const params = new URLSearchParams(searchParams);
+    
+        for (const [key, value] of Object.entries(next)) {
+            if (value) {
+                params.set(key, value);
+            } else {
+                params.delete(key);
+            }
+        }
+    
+        setSearchParams(params);
+    }
+
     return (
         <section className='page'>
             <p>
@@ -155,6 +200,50 @@ function ProjectDetailPage() {
 
                     <div className='card'>
                         <h2>Reports</h2>
+
+                        <div className='toolbar'>
+                            <label>
+                                <span>Search</span>
+                                <input
+                                    type='text'
+                                    value={searchInput}
+                                    onChange={(event) => setSearchInput(event.target.value)}
+                                    placeholder='Search title or summary'
+                                />
+                            </label>
+
+                            <label>
+                                <span>Sort</span>
+                                <select
+                                    value={sort}
+                                    onChange={(event) =>
+                                        updateQuery({
+                                            sort: event.target.value,
+                                            page: '1'
+                                        })
+                                    }
+                                >
+                                    <option value='createdAt'>Created date</option>
+                                    <option value='title'>Title</option>
+                                </select>
+                            </label>
+
+                            <label>
+                                <span>Order</span>
+                                <select
+                                    value={order}
+                                    onChange={(event) =>
+                                        updateQuery({
+                                            order: event.target.value,
+                                            page: '1'
+                                        })
+                                    }
+                                >
+                                    <option value='desc'>Descending</option>
+                                    <option value='asc'>Ascending</option>
+                                </select>
+                            </label>
+                        </div>
 
                         {reports && reports.data.length > 0 ? (
                             <>

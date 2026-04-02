@@ -37,6 +37,14 @@ type UpdateReportInput = {
     uxScore?: number;
 };
 
+type GetProjectReportsOptions = {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: 'createdAt' | 'title';
+    order?: 'asc' | 'desc';
+};
+
 function updateReport(id: string, input: UpdateReportInput) {
     return apiFetch<Report>(`/reports/${id}`, {
         method: 'PATCH',
@@ -88,8 +96,14 @@ function getProjectById(id: string) {
     return apiFetch<Project>(`/projects/${id}`);
 }
 
-function getProjectReports(id: string, page = 1, limit = 10) {
-    const query = buildQuery({ page, limit });
+function getProjectReports(id: string, options: GetProjectReportsOptions = {}) {
+    const query = buildQuery({
+        page: options.page,
+        limit: options.limit,
+        search: options.search,
+        sort: options.sort,
+        order: options.order
+    });
 
     return apiFetch<PaginatedResponse<Report>>(`/projects/${id}/reports${query}`);
 }
