@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getProjects } from '../api/projects';
+import { Alert } from '../components/feedback/Alert';
+import { Loading } from '../components/feedback/Loading';
 import { CreateProjectForm } from '../components/projects/CreateProjectForm';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import type { PaginatedResponse, Project } from '../types/api';
 
 function ProjectsPage() {
+    useDocumentTitle('Projects | Site Score UI');
+
     const [searchParams, setSearchParams] = useSearchParams();
     const [response, setResponse] = useState<PaginatedResponse<Project> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
 
     const page = Number(searchParams.get('page') || '1');
@@ -56,7 +62,8 @@ function ProjectsPage() {
         setSearchParams(params);
     }
 
-    function handleProjectCreated() {
+    function handleProjectCreated(project: Project) {
+        setSuccessMessage(`Project created: ${project.name}`);
         setReloadKey((value) => value + 1);
     }
 
@@ -66,6 +73,12 @@ function ProjectsPage() {
                 <h1>Projects</h1>
                 <p>Browse projects from the Site Score API.</p>
             </div>
+
+            {successMessage ? (
+                <Alert variant='success' title='Success'>
+                    {successMessage}
+                </Alert>
+            ) : null}
 
             <CreateProjectForm onCreated={handleProjectCreated} />
 
@@ -119,28 +132,39 @@ function ProjectsPage() {
                     </label>
                 </div>
 
-                {isLoading ? <p>Loading projects...</p> : null}
-                {error ? <p className='error-text'>{error}</p> : null}
+                {isLoading ? (
+                    <Loading label='Loading projects...' centred />
+                ) : null}
+
+                {error ? (
+                    <Alert variant='error' title='Could not load projects'>
+                        {error}
+                    </Alert>
+                ) : null}
 
                 {!isLoading && !error && response ? (
                     <>
-                        <ul className='item-list'>
-                            {response.data.map((project) => (
-                                <li key={project.id} className='item-card'>
-                                    <h2>
-                                        <Link to={`/projects/${project.id}`}>
-                                            {project.name}
-                                        </Link>
-                                    </h2>
-                                    <p>{project.url}</p>
-                                    <p className='muted-text'>
-                                        Created: {new Date(project.createdAt).toLocaleString()}
-                                    </p>
-                                </li>
-                            ))}
-                        </ul>
-
-                        {response.data.length === 0 ? <p>No projects found.</p> : null}
+                        {response.data.length === 0 ? (
+                            <Alert variant='info' title='No projects found'>
+                                Try changing your search or create a new project.
+                            </Alert>
+                        ) : (
+                            <ul className='item-list'>
+                                {response.data.map((project) => (
+                                    <li key={project.id} className='item-card'>
+                                        <h2>
+                                            <Link to={`/projects/${project.id}`}>
+                                                {project.name}
+                                            </Link>
+                                        </h2>
+                                        <p>{project.url}</p>
+                                        <p className='muted-text'>
+                                            Created: {new Date(project.createdAt).toLocaleString()}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
 
                         <div className='pagination'>
                             <button

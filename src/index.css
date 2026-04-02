@@ -173,6 +173,154 @@ button {
   margin: 0.25rem 0 0;
 }
 
+.score-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.button-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.item-card__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.alert {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #d9d9d9;
+  border-radius: 10px;
+  background: #f7f7f7;
+}
+
+.alert__title {
+  font-size: 0.95rem;
+}
+
+.alert__content {
+  font-size: 0.95rem;
+}
+
+.alert--default {
+  background: #f7f7f7;
+  border-color: #d9d9d9;
+}
+
+.alert--info {
+  background: #eef6ff;
+  border-color: #b8d8ff;
+}
+
+.alert--success {
+  background: #eef9f0;
+  border-color: #b9e2c0;
+}
+
+.alert--warning {
+  background: #fff8e8;
+  border-color: #f0d08a;
+}
+
+.alert--error {
+  background: #fff1f1;
+  border-color: #efb4b4;
+}
+
+.loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #444444;
+}
+
+.loading--centred {
+  justify-content: center;
+  width: 100%;
+}
+
+.loading__spinner {
+  display: inline-block;
+  border: 2px solid #d6d6d6;
+  border-top-color: #555555;
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading--small .loading__spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.loading--medium .loading__spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.loading--large .loading__spinner {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.loading__label {
+  font-size: 0.95rem;
+}
+
+.page > .alert,
+.card > .alert {
+    margin-top: 0.5rem;
+}
+
+.confirm-dialog {
+  width: min(100%, 28rem);
+  border: 1px solid #d9d9d9;
+  border-radius: 12px;
+  padding: 0;
+  background: #ffffff;
+  color: #1c1c1c;
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.confirm-dialog__content {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.confirm-dialog__content h2,
+.confirm-dialog__content p {
+  margin: 0;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.button-danger {
+  border-color: #cf4b4b;
+  background: #ffeaea;
+}
+
+@keyframes spin {
+  to {
+      transform: rotate(360deg);
+  }
+}
+
 @media (min-width: 800px) {
   .toolbar {
       grid-template-columns: repeat(3, minmax(0, 1fr));

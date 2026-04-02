@@ -14,6 +14,50 @@ type CreateProjectInput = {
     url: string;
 };
 
+type CreateReportInput = {
+    title: string;
+    summary: string;
+    accessibilityScore: number;
+    performanceScore: number;
+    seoScore: number;
+    uxScore: number;
+};
+
+type UpdateProjectInput = {
+    name?: string;
+    url?: string;
+};
+
+type UpdateReportInput = {
+    title?: string;
+    summary?: string;
+    accessibilityScore?: number;
+    performanceScore?: number;
+    seoScore?: number;
+    uxScore?: number;
+};
+
+function updateReport(id: string, input: UpdateReportInput) {
+    return apiFetch<Report>(`/reports/${id}`, {
+        method: 'PATCH',
+        bodyJson: input
+    });
+}
+
+function updateProject(id: string, input: UpdateProjectInput) {
+    return apiFetch<Project>(`/projects/${id}`, {
+        method: 'PATCH',
+        bodyJson: input
+    });
+}
+
+function createReport(projectId: string, input: CreateReportInput) {
+    return apiFetch<Report>(`/projects/${projectId}/reports`, {
+        method: 'POST',
+        bodyJson: input
+    });
+}
+
 function buildQuery(params: Record<string, string | number | undefined>) {
     const searchParams = new URLSearchParams();
 
@@ -57,4 +101,16 @@ function createProject(input: CreateProjectInput) {
     });
 }
 
-export { getProjects, getProjectById, getProjectReports, createProject };
+function deleteProject(id: string) {
+    return apiFetch<void>(`/projects/${id}`, {
+        method: 'DELETE'
+    });
+}
+
+function deleteReport(id: string) {
+    return apiFetch<void>(`/reports/${id}`, {
+        method: 'DELETE'
+    });
+}
+
+export { getProjects, getProjectById, getProjectReports, createProject, createReport, updateProject, updateReport, deleteProject, deleteReport };

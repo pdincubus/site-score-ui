@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'
+import { Alert } from '../components/feedback/Alert';
+import { Loading } from '../components/feedback/Loading';
+import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
-
 function LoginPage() {
+    useDocumentTitle('Log in | Site Score UI');
+
     const navigate = useNavigate();
     const { login, isAuthenticated, isLoading } = useAuth();
 
@@ -13,11 +16,17 @@ function LoginPage() {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!isLoading && isAuthenticated) {
-        return <Navigate to='/projects' replace />;
+    if (isLoading) {
+        return (
+            <section className='page'>
+                <Loading label='Checking your session...' size='large' centred />
+            </section>
+        );
     }
 
-    useDocumentTitle('Log in | Site Score UI')
+    if (isAuthenticated) {
+        return <Navigate to='/projects' replace />;
+    }
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -61,7 +70,11 @@ function LoginPage() {
                         />
                     </label>
 
-                    {error ? <p className='error-text'>{error}</p> : null}
+                    {error ? (
+                        <Alert variant='error' title='Login failed'>
+                            {error}
+                        </Alert>
+                    ) : null}
 
                     <button type='submit' disabled={isSubmitting}>
                         {isSubmitting ? 'Logging in...' : 'Log in'}

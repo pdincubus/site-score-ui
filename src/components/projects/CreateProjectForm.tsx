@@ -58,7 +58,11 @@ function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
                     />
                 </label>
 
-                {error ? <p className='error-text'>{error}</p> : null}
+                {error ? (
+    <Alert variant='error' title='Could not create project'>
+        {error}
+    </Alert>
+) : null}
 
                 <button type='submit' disabled={isSubmitting}>
                     {isSubmitting ? 'Creating project...' : 'Create project'}
