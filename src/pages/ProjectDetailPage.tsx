@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getProjectById, getProjectReports } from '../api/projects';
 import { Alert } from '../components/feedback/Alert';
 import { Loading } from '../components/feedback/Loading';
+import { ModalDialog } from '../components/feedback/ModalDialog';
 import { EditProjectForm } from '../components/projects/EditProjectForm';
 import { CreateReportForm } from '../components/reports/CreateReportForm';
 import { EditReportForm } from '../components/reports/EditReportForm';
@@ -22,6 +23,8 @@ function ProjectDetailPage() {
     const [successMessage, setSuccessMessage] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
     const [editingReportId, setEditingReportId] = useState<string | null>(null);
+    const [editProjectDialogOpen, setEditProjectDialogOpen] = useState(false);
+    const [createReportDialogOpen, setCreateReportDialogOpen] = useState(false);
     const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
 
     const debouncedSearch = useDebouncedValue(searchInput, 300);
@@ -92,6 +95,7 @@ function ProjectDetailPage() {
     function handleProjectUpdated(updatedProject: Project) {
         setProject(updatedProject);
         setSuccessMessage(`Project updated: ${updatedProject.name}`);
+        setEditProjectDialogOpen(false);
     }
 
     function handleProjectDeleted() {
@@ -101,6 +105,7 @@ function ProjectDetailPage() {
     function handleReportCreated() {
         setSuccessMessage('Report created successfully');
         setReloadKey((value) => value + 1);
+        setCreateReportDialogOpen(false);
     }
 
     function handleReportUpdated(updatedReport: Report) {
@@ -176,27 +181,55 @@ function ProjectDetailPage() {
 
             {!isLoading && !error && project ? (
                 <>
-                    <div className='page-heading'>
-                        <h1>{project.name}</h1>
-                        <p>{project.url}</p>
+                    <div className='page-heading page-heading--with-actions'>
+                        <div>
+                            <h1>{project.name}</h1>
+                            <p>{project.url}</p>
+                        </div>
+                        <div className='page-heading__actions'>
+                            <button type='button' onClick={() => setCreateReportDialogOpen(true)}>
+                                Create report
+                            </button>
+                            <button type='button' onClick={() => setEditProjectDialogOpen(true)}>
+                                Edit project
+                            </button>
+                        </div>
                     </div>
+
+                    <ModalDialog
+                        title='Create report'
+                        open={createReportDialogOpen}
+                        onClose={() => setCreateReportDialogOpen(false)}
+                    >
+                        {createReportDialogOpen ? (
+                            <CreateReportForm
+                                variant='embedded'
+                                projectId={project.id}
+                                onCreated={handleReportCreated}
+                            />
+                        ) : null}
+                    </ModalDialog>
+
+                    <ModalDialog
+                        title='Edit project'
+                        open={editProjectDialogOpen}
+                        onClose={() => setEditProjectDialogOpen(false)}
+                    >
+                        {editProjectDialogOpen ? (
+                            <EditProjectForm
+                                variant='embedded'
+                                project={project}
+                                onUpdated={handleProjectUpdated}
+                                onDeleted={handleProjectDeleted}
+                            />
+                        ) : null}
+                    </ModalDialog>
 
                     {successMessage ? (
                         <Alert variant='success' title='Success'>
                             {successMessage}
                         </Alert>
                     ) : null}
-
-                    <EditProjectForm
-                        project={project}
-                        onUpdated={handleProjectUpdated}
-                        onDeleted={handleProjectDeleted}
-                    />
-
-                    <CreateReportForm
-                        projectId={project.id}
-                        onCreated={handleReportCreated}
-                    />
 
                     <div className='card'>
                         <h2>Reports</h2>

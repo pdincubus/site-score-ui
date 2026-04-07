@@ -8,6 +8,7 @@ import {
     type ReactNode
 } from 'react';
 import { getCurrentUser, login as loginRequest, logout as logoutRequest } from '../api/auth';
+import { setOnUnauthorized } from '../api/client';
 import type { User } from '../types/api';
 
 type LoginInput = {
@@ -45,14 +46,29 @@ function AuthProvider({ children }: { children: ReactNode }) {
         void refreshUser();
     }, [refreshUser]);
 
+    useEffect(() => {
+        setOnUnauthorized(() => {
+            setUser(null);
+            setIsLoading(false);
+        });
+
+        return () => {
+            setOnUnauthorized(null);
+        };
+    }, []);
+
     const login = useCallback(async (input: LoginInput) => {
         const loggedInUser = await loginRequest(input);
         setUser(loggedInUser);
     }, []);
 
     const logout = useCallback(async () => {
-        await logoutRequest();
-        setUser(null);
+        try {
+            await logoutRequest();
+        } finally {
+            setUser(null);
+            setIsLoading(false);
+        }
     }, []);
 
     const value = useMemo<AuthContextValue>(

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { getProjects } from '../api/projects';
 import { Alert } from '../components/feedback/Alert';
 import { Loading } from '../components/feedback/Loading';
+import { ModalDialog } from '../components/feedback/ModalDialog';
 import { CreateProjectForm } from '../components/projects/CreateProjectForm';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import type { PaginatedResponse, Project } from '../types/api';
@@ -17,6 +18,7 @@ function ProjectsPage() {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
 
     const debouncedSearch = useDebouncedValue(searchInput, 300);
@@ -87,22 +89,36 @@ function ProjectsPage() {
     function handleProjectCreated(project: Project) {
         setSuccessMessage(`Project created: ${project.name}`);
         setReloadKey((value) => value + 1);
+        setCreateDialogOpen(false);
     }
 
     return (
         <section className='page'>
-            <div className='page-heading'>
-                <h1>Projects</h1>
-                <p>Browse projects from the Site Score API.</p>
+            <div className='page-heading page-heading--with-actions'>
+                <div>
+                    <h1>Projects</h1>
+                    <p>Browse projects from the Site Score API.</p>
+                </div>
+                <button type='button' onClick={() => setCreateDialogOpen(true)}>
+                    Create project
+                </button>
             </div>
+
+            <ModalDialog
+                title='Create project'
+                open={createDialogOpen}
+                onClose={() => setCreateDialogOpen(false)}
+            >
+                {createDialogOpen ? (
+                    <CreateProjectForm variant='embedded' onCreated={handleProjectCreated} />
+                ) : null}
+            </ModalDialog>
 
             {successMessage ? (
                 <Alert variant='success' title='Success'>
                     {successMessage}
                 </Alert>
             ) : null}
-
-            <CreateProjectForm onCreated={handleProjectCreated} />
 
             <div className='card'>
                 <div className='toolbar'>
