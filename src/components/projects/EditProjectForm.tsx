@@ -11,9 +11,15 @@ type EditProjectFormProps = {
     project: Project;
     onUpdated: (project: Project) => void;
     onDeleted: () => void;
+    variant?: 'card' | 'embedded';
 };
 
-function EditProjectForm({ project, onUpdated, onDeleted }: EditProjectFormProps) {
+function EditProjectForm({
+    project,
+    onUpdated,
+    onDeleted,
+    variant = 'card'
+}: EditProjectFormProps) {
     const confirmDialogRef = useRef<ConfirmDialogHandle | null>(null);
 
     const [name, setName] = useState(project.name);
@@ -72,10 +78,8 @@ function EditProjectForm({ project, onUpdated, onDeleted }: EditProjectFormProps
         }
     }
 
-    return (
-        <div className='card'>
-            <h2>Edit project</h2>
-
+    const form = (
+        <>
             <form onSubmit={handleSubmit} className='form-stack'>
                 <label>
                     <span>Name</span>
@@ -119,6 +123,17 @@ function EditProjectForm({ project, onUpdated, onDeleted }: EditProjectFormProps
             </form>
 
             <ConfirmDialog ref={confirmDialogRef} />
+        </>
+    );
+
+    if (variant === 'embedded') {
+        return form;
+    }
+
+    return (
+        <div className='card'>
+            <h2>Edit project</h2>
+            {form}
         </div>
     );
 }

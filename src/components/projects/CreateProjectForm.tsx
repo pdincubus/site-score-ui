@@ -5,9 +5,10 @@ import { Alert } from '../feedback/Alert';
 
 type CreateProjectFormProps = {
     onCreated: (project: Project) => void;
+    variant?: 'card' | 'embedded';
 };
 
-function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
+function CreateProjectForm({ onCreated, variant = 'card' }: CreateProjectFormProps) {
     const [name, setName] = useState('');
     const [url, setUrl] = useState('');
     const [error, setError] = useState('');
@@ -34,10 +35,7 @@ function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
         }
     }
 
-    return (
-        <div className='card'>
-            <h2>Create project</h2>
-
+    const form = (
             <form onSubmit={handleSubmit} className='form-stack'>
                 <label>
                     <span>Name</span>
@@ -60,15 +58,25 @@ function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
                 </label>
 
                 {error ? (
-    <Alert variant='error' title='Could not create project'>
-        {error}
-    </Alert>
-) : null}
+                    <Alert variant='error' title='Could not create project'>
+                        {error}
+                    </Alert>
+                ) : null}
 
                 <button type='submit' disabled={isSubmitting}>
                     {isSubmitting ? 'Creating project...' : 'Create project'}
                 </button>
             </form>
+    );
+
+    if (variant === 'embedded') {
+        return form;
+    }
+
+    return (
+        <div className='card'>
+            <h2>Create project</h2>
+            {form}
         </div>
     );
 }

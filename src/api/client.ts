@@ -1,17 +1,24 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const NORMALIZED_API_BASE_URL = API_BASE_URL?.replace(/\/+$/, '');
+
+let onUnauthorizedHandler: (() => void) | null = null;
 
 type ApiFetchOptions = RequestInit & {
     bodyJson?: unknown;
 };
 
 async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+    if (!NORMALIZED_API_BASE_URL) {
+        throw new Error('Missing VITE_API_BASE_URL environment variable');
+    }
+
     const headers = new Headers(options.headers);
 
     if (options.bodyJson !== undefined) {
         headers.set('Content-Type', 'application/json');
     }
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(`${NORMALIZED_API_BASE_URL}${path}`, {
         ...options,
         credentials: 'include',
         headers,
@@ -23,6 +30,10 @@ async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise
     const data = isJson ? await response.json() : null;
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            onUnauthorizedHandler?.();
+        }
+
         const message =
             data && typeof data === 'object' && 'error' in data
                 ? String(data.error)
@@ -34,4 +45,8 @@ async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise
     return data as T;
 }
 
-export { apiFetch };
+function setOnUnauthorized(handler: (() => void) | null) {
+    onUnauthorizedHandler = handler;
+}
+
+export { apiFetch, setOnUnauthorized };
