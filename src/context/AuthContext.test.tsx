@@ -129,4 +129,36 @@ describe('AuthContext', () => {
         await expect(apiFetch('/projects')).rejects.toThrow('Unauthorized');
         expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
+
+    it('does not emit React unmounted state update warnings after unmount', async () => {
+        vi.mocked(authApi.getCurrentUser).mockResolvedValue({
+            id: 'u1',
+            name: 'Test User',
+            email: 'test@example.com',
+            createdAt: '2026-01-01T00:00:00.000Z'
+        });
+
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'content-type': 'application/json' }
+            })
+        );
+
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const { unmount } = render(
+            <AuthProvider>
+                <AuthHarness />
+            </AuthProvider>
+        );
+
+        await screen.findByText('signed-in:test@example.com');
+        unmount();
+
+        await expect(apiFetch('/projects')).rejects.toThrow('Unauthorized');
+
+        const combinedErrors = consoleErrorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+        expect(combinedErrors).not.toContain("Can't perform a React state update on an unmounted component");
+    });
 });
