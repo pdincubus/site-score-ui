@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { createReport } from '../../api/projects';
 import type { Report } from '../../types/api';
 import { Alert } from '../feedback/Alert';
+import {
+    REPORT_SUMMARY_MAX_LENGTH,
+    REPORT_TITLE_MAX_LENGTH,
+    SCORE_MAX,
+    SCORE_MIN,
+    validateReportForm
+} from './reportFormValidation';
 
 type CreateReportFormProps = {
     projectId: string;
@@ -26,17 +33,25 @@ function CreateReportForm({
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError('');
+
+        const validation = validateReportForm({
+            title,
+            summary,
+            accessibilityScore,
+            performanceScore,
+            seoScore,
+            uxScore
+        });
+
+        if (!validation.data) {
+            setError(validation.error);
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const report = await createReport(projectId, {
-                title,
-                summary,
-                accessibilityScore: Number(accessibilityScore),
-                performanceScore: Number(performanceScore),
-                seoScore: Number(seoScore),
-                uxScore: Number(uxScore)
-            });
+            const report = await createReport(projectId, validation.data);
 
             setTitle('');
             setSummary('');
@@ -62,6 +77,8 @@ function CreateReportForm({
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
                     placeholder='Homepage audit'
+                    required
+                    maxLength={REPORT_TITLE_MAX_LENGTH}
                 />
             </label>
 
@@ -72,6 +89,8 @@ function CreateReportForm({
                     value={summary}
                     onChange={(event) => setSummary(event.target.value)}
                     placeholder='Short summary'
+                    required
+                    maxLength={REPORT_SUMMARY_MAX_LENGTH}
                 />
             </label>
 
@@ -80,10 +99,12 @@ function CreateReportForm({
                     <span>Accessibility</span>
                     <input
                         type='number'
-                        min='0'
-                        max='100'
+                        min={SCORE_MIN}
+                        max={SCORE_MAX}
+                        step='1'
                         value={accessibilityScore}
                         onChange={(event) => setAccessibilityScore(event.target.value)}
+                        required
                     />
                 </label>
 
@@ -91,10 +112,12 @@ function CreateReportForm({
                     <span>Performance</span>
                     <input
                         type='number'
-                        min='0'
-                        max='100'
+                        min={SCORE_MIN}
+                        max={SCORE_MAX}
+                        step='1'
                         value={performanceScore}
                         onChange={(event) => setPerformanceScore(event.target.value)}
+                        required
                     />
                 </label>
 
@@ -102,10 +125,12 @@ function CreateReportForm({
                     <span>SEO</span>
                     <input
                         type='number'
-                        min='0'
-                        max='100'
+                        min={SCORE_MIN}
+                        max={SCORE_MAX}
+                        step='1'
                         value={seoScore}
                         onChange={(event) => setSeoScore(event.target.value)}
+                        required
                     />
                 </label>
 
@@ -113,10 +138,12 @@ function CreateReportForm({
                     <span>UX</span>
                     <input
                         type='number'
-                        min='0'
-                        max='100'
+                        min={SCORE_MIN}
+                        max={SCORE_MAX}
+                        step='1'
                         value={uxScore}
                         onChange={(event) => setUxScore(event.target.value)}
+                        required
                     />
                 </label>
             </div>

@@ -80,4 +80,34 @@ describe('apiFetch', () => {
 
         await expect(apiFetch('/projects')).rejects.toThrow('Request failed');
     });
+
+    it('does not call unauthorized handler for non-auth errors', async () => {
+        const unauthorizedSpy = vi.fn();
+        setOnUnauthorized(unauthorizedSpy);
+
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ error: 'Bad request' }), {
+                status: 400,
+                headers: { 'content-type': 'application/json' }
+            })
+        );
+
+        await expect(apiFetch('/projects')).rejects.toThrow('Bad request');
+        expect(unauthorizedSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not set content-type when bodyJson is not provided', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ ok: true }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' }
+            })
+        );
+
+        await apiFetch('/projects', { method: 'GET' });
+
+        const [, options] = fetchSpy.mock.calls[0] ?? [];
+        const headers = new Headers(options?.headers);
+        expect(headers.has('content-type')).toBe(false);
+    });
 });

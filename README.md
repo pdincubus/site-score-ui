@@ -161,6 +161,18 @@ A simple deployment target is Vercel.
 VITE_API_BASE_URL=https://site-score-api.onrender.com
 ```
 
+### Production hardening checklist
+
+Before using this UI for paid work, confirm the API and deployment are aligned with these controls:
+
+- The deployed API origin is listed in the Content Security Policy `connect-src` directive in `vercel.json`.
+- The API allows credentials only from known frontend origins, not wildcard CORS.
+- Session cookies are `httpOnly`, `secure`, and use an appropriate `sameSite` policy.
+- Cookie-authenticated mutation endpoints have CSRF protection.
+- Login and other sensitive endpoints are rate limited.
+- API error responses do not expose stack traces or internal details.
+- Production dependency audits are run before release.
+
 ## Current status
 
 This project currently demonstrates:

@@ -8,7 +8,7 @@ const authState = {
     isLoading: false
 };
 
-vi.mock('../../context/AuthContext', () => ({
+vi.mock('../../context/useAuth', () => ({
     useAuth: () => ({
         isAuthenticated: authState.isAuthenticated,
         isLoading: authState.isLoading
@@ -36,6 +36,7 @@ describe('ProtectedRoute', () => {
         );
 
         expect(screen.getByText('Loading...')).toBeInTheDocument();
+        expect(screen.queryByText('Login page')).not.toBeInTheDocument();
     });
 
     it('redirects unauthenticated users to login', () => {

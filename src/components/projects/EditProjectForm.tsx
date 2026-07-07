@@ -6,6 +6,12 @@ import {
     type ConfirmDialogHandle
 } from '../feedback/ConfirmDialog';
 import type { Project } from '../../types/api';
+import {
+    PROJECT_NAME_MAX_LENGTH,
+    PROJECT_URL_MAX_LENGTH,
+    PROJECT_URL_PATTERN,
+    validateProjectForm
+} from './projectFormValidation';
 
 type EditProjectFormProps = {
     project: Project;
@@ -36,13 +42,21 @@ function EditProjectForm({
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError('');
+
+        const validation = validateProjectForm({
+            name,
+            url
+        });
+
+        if (!validation.data) {
+            setError(validation.error);
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const updatedProject = await updateProject(project.id, {
-                name,
-                url
-            });
+            const updatedProject = await updateProject(project.id, validation.data);
 
             onUpdated(updatedProject);
         } catch (err) {
@@ -88,6 +102,8 @@ function EditProjectForm({
                         value={name}
                         onChange={(event) => setName(event.target.value)}
                         placeholder='Project name'
+                        required
+                        maxLength={PROJECT_NAME_MAX_LENGTH}
                     />
                 </label>
 
@@ -98,6 +114,9 @@ function EditProjectForm({
                         value={url}
                         onChange={(event) => setUrl(event.target.value)}
                         placeholder='https://example.com'
+                        required
+                        maxLength={PROJECT_URL_MAX_LENGTH}
+                        pattern={PROJECT_URL_PATTERN}
                     />
                 </label>
 

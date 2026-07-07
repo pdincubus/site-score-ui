@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getProjectById, getProjectReports } from '../api/projects';
+import { ORDER_OPTIONS, REPORT_SORT_OPTIONS, getProjectById, getProjectReports } from '../api/projects';
+import { normaliseAllowedValue, normaliseLimit, normalisePage } from '../api/query';
 import { Alert } from '../components/feedback/Alert';
 import { Loading } from '../components/feedback/Loading';
 import { ModalDialog } from '../components/feedback/ModalDialog';
@@ -28,13 +29,30 @@ function ProjectDetailPage() {
     const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
 
     const debouncedSearch = useDebouncedValue(searchInput, 300);
-    const page = Number(searchParams.get('page') || '1');
-    const limit = Number(searchParams.get('limit') || '10');
+    const page = normalisePage(searchParams.get('page'));
+    const limit = normaliseLimit(searchParams.get('limit'));
     const search = searchParams.get('search') || '';
-    const sort = (searchParams.get('sort') || 'createdAt') as 'createdAt' | 'title';
-    const order = (searchParams.get('order') || 'desc') as 'asc' | 'desc';
+    const sort = normaliseAllowedValue(searchParams.get('sort'), REPORT_SORT_OPTIONS, 'createdAt');
+    const order = normaliseAllowedValue(searchParams.get('order'), ORDER_OPTIONS, 'desc');
 
     useDocumentTitle(project ? `${project.name} | Site Score UI` : 'Project | Site Score UI');
+
+    const updateQuery = useCallback(
+        (next: Record<string, string>) => {
+            const params = new URLSearchParams(searchParams);
+
+            for (const [key, value] of Object.entries(next)) {
+                if (value) {
+                    params.set(key, value);
+                } else {
+                    params.delete(key);
+                }
+            }
+
+            setSearchParams(params);
+        },
+        [searchParams, setSearchParams]
+    );
 
     useEffect(() => {
         async function loadProjectData() {
@@ -80,7 +98,7 @@ function ProjectDetailPage() {
             search: debouncedSearch,
             page: '1'
         });
-    }, [debouncedSearch, search, searchParams]);
+    }, [debouncedSearch, search, updateQuery]);
 
     useEffect(() => {
         setSuccessMessage('');
@@ -147,20 +165,6 @@ function ProjectDetailPage() {
 
         setEditingReportId(null);
         setSuccessMessage('Report deleted successfully');
-    }
-
-    function updateQuery(next: Record<string, string>) {
-        const params = new URLSearchParams(searchParams);
-    
-        for (const [key, value] of Object.entries(next)) {
-            if (value) {
-                params.set(key, value);
-            } else {
-                params.delete(key);
-            }
-        }
-    
-        setSearchParams(params);
     }
 
     return (

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Alert } from '../components/feedback/Alert';
 import { Loading } from '../components/feedback/Loading';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 function LoginPage() {
@@ -34,7 +34,7 @@ function LoginPage() {
         setIsSubmitting(true);
 
         try {
-            await login({ email, password });
+            await login({ email: email.trim(), password });
             navigate('/projects');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed');
@@ -57,6 +57,7 @@ function LoginPage() {
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
                             autoComplete='email'
+                            required
                         />
                     </label>
 
@@ -67,6 +68,7 @@ function LoginPage() {
                             value={password}
                             onChange={(event) => setPassword(event.target.value)}
                             autoComplete='current-password'
+                            required
                         />
                     </label>
 

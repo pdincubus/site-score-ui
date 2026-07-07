@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getProjects } from '../api/projects';
+import { ORDER_OPTIONS, PROJECT_SORT_OPTIONS, getProjects } from '../api/projects';
+import { normaliseAllowedValue, normaliseLimit, normalisePage } from '../api/query';
 import { Alert } from '../components/feedback/Alert';
 import { Loading } from '../components/feedback/Loading';
 import { ModalDialog } from '../components/feedback/ModalDialog';
@@ -22,11 +23,28 @@ function ProjectsPage() {
     const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
 
     const debouncedSearch = useDebouncedValue(searchInput, 300);
-    const page = Number(searchParams.get('page') || '1');
-    const limit = Number(searchParams.get('limit') || '10');
+    const page = normalisePage(searchParams.get('page'));
+    const limit = normaliseLimit(searchParams.get('limit'));
     const search = searchParams.get('search') || '';
-    const sort = (searchParams.get('sort') || 'createdAt') as 'createdAt' | 'name';
-    const order = (searchParams.get('order') || 'desc') as 'asc' | 'desc';
+    const sort = normaliseAllowedValue(searchParams.get('sort'), PROJECT_SORT_OPTIONS, 'createdAt');
+    const order = normaliseAllowedValue(searchParams.get('order'), ORDER_OPTIONS, 'desc');
+
+    const updateQuery = useCallback(
+        (next: Record<string, string>) => {
+            const params = new URLSearchParams(searchParams);
+
+            for (const [key, value] of Object.entries(next)) {
+                if (value) {
+                    params.set(key, value);
+                } else {
+                    params.delete(key);
+                }
+            }
+
+            setSearchParams(params);
+        },
+        [searchParams, setSearchParams]
+    );
 
     const loadProjects = useCallback(async () => {
         setIsLoading(true);
@@ -62,25 +80,11 @@ function ProjectsPage() {
             search: debouncedSearch,
             page: '1'
         });
-    }, [debouncedSearch, search]);
+    }, [debouncedSearch, search, updateQuery]);
 
     useEffect(() => {
         void loadProjects();
     }, [loadProjects, reloadKey]);
-
-    function updateQuery(next: Record<string, string>) {
-        const params = new URLSearchParams(searchParams);
-
-        for (const [key, value] of Object.entries(next)) {
-            if (value) {
-                params.set(key, value);
-            } else {
-                params.delete(key);
-            }
-        }
-
-        setSearchParams(params);
-    }
 
     useEffect(() => {
         setSuccessMessage('');

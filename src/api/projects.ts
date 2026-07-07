@@ -1,12 +1,27 @@
 import { apiFetch } from './client';
+import {
+    buildQuery,
+    encodePathSegment,
+    normaliseAllowedValue,
+    normaliseLimit,
+    normalisePage
+} from './query';
 import type { PaginatedResponse, Project, Report } from '../types/api';
+
+const PROJECT_SORT_OPTIONS = ['createdAt', 'name'] as const;
+const REPORT_SORT_OPTIONS = ['createdAt', 'title'] as const;
+const ORDER_OPTIONS = ['asc', 'desc'] as const;
+
+type ProjectSort = (typeof PROJECT_SORT_OPTIONS)[number];
+type ReportSort = (typeof REPORT_SORT_OPTIONS)[number];
+type SortOrder = (typeof ORDER_OPTIONS)[number];
 
 type GetProjectsOptions = {
     page?: number;
     limit?: number;
     search?: string;
-    sort?: 'createdAt' | 'name';
-    order?: 'asc' | 'desc';
+    sort?: ProjectSort;
+    order?: SortOrder;
 };
 
 type CreateProjectInput = {
@@ -41,71 +56,71 @@ type GetProjectReportsOptions = {
     page?: number;
     limit?: number;
     search?: string;
-    sort?: 'createdAt' | 'title';
-    order?: 'asc' | 'desc';
+    sort?: ReportSort;
+    order?: SortOrder;
 };
 
 function updateReport(id: string, input: UpdateReportInput) {
-    return apiFetch<Report>(`/reports/${id}`, {
+    return apiFetch<Report>(`/reports/${encodePathSegment(id)}`, {
         method: 'PATCH',
         bodyJson: input
     });
 }
 
 function updateProject(id: string, input: UpdateProjectInput) {
-    return apiFetch<Project>(`/projects/${id}`, {
+    return apiFetch<Project>(`/projects/${encodePathSegment(id)}`, {
         method: 'PATCH',
         bodyJson: input
     });
 }
 
 function createReport(projectId: string, input: CreateReportInput) {
-    return apiFetch<Report>(`/projects/${projectId}/reports`, {
+    return apiFetch<Report>(`/projects/${encodePathSegment(projectId)}/reports`, {
         method: 'POST',
         bodyJson: input
     });
 }
 
-function buildQuery(params: Record<string, string | number | undefined>) {
-    const searchParams = new URLSearchParams();
-
-    for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined && value !== '') {
-            searchParams.set(key, String(value));
-        }
-    }
-
-    const query = searchParams.toString();
-
-    return query ? `?${query}` : '';
-}
-
 function getProjects(options: GetProjectsOptions = {}) {
     const query = buildQuery({
-        page: options.page,
-        limit: options.limit,
+        page: options.page === undefined ? undefined : normalisePage(options.page),
+        limit: options.limit === undefined ? undefined : normaliseLimit(options.limit),
         search: options.search,
-        sort: options.sort,
-        order: options.order
+        sort:
+            options.sort === undefined
+                ? undefined
+                : normaliseAllowedValue(options.sort, PROJECT_SORT_OPTIONS, 'createdAt'),
+        order:
+            options.order === undefined
+                ? undefined
+                : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc')
     });
 
     return apiFetch<PaginatedResponse<Project>>(`/projects${query}`);
 }
 
 function getProjectById(id: string) {
-    return apiFetch<Project>(`/projects/${id}`);
+    return apiFetch<Project>(`/projects/${encodePathSegment(id)}`);
 }
 
 function getProjectReports(id: string, options: GetProjectReportsOptions = {}) {
     const query = buildQuery({
-        page: options.page,
-        limit: options.limit,
+        page: options.page === undefined ? undefined : normalisePage(options.page),
+        limit: options.limit === undefined ? undefined : normaliseLimit(options.limit),
         search: options.search,
-        sort: options.sort,
-        order: options.order
+        sort:
+            options.sort === undefined
+                ? undefined
+                : normaliseAllowedValue(options.sort, REPORT_SORT_OPTIONS, 'createdAt'),
+        order:
+            options.order === undefined
+                ? undefined
+                : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc')
     });
 
-    return apiFetch<PaginatedResponse<Report>>(`/projects/${id}/reports${query}`);
+    return apiFetch<PaginatedResponse<Report>>(
+        `/projects/${encodePathSegment(id)}/reports${query}`
+    );
 }
 
 function createProject(input: CreateProjectInput) {
@@ -116,15 +131,28 @@ function createProject(input: CreateProjectInput) {
 }
 
 function deleteProject(id: string) {
-    return apiFetch<void>(`/projects/${id}`, {
+    return apiFetch<void>(`/projects/${encodePathSegment(id)}`, {
         method: 'DELETE'
     });
 }
 
 function deleteReport(id: string) {
-    return apiFetch<void>(`/reports/${id}`, {
+    return apiFetch<void>(`/reports/${encodePathSegment(id)}`, {
         method: 'DELETE'
     });
 }
 
-export { getProjects, getProjectById, getProjectReports, createProject, createReport, updateProject, updateReport, deleteProject, deleteReport };
+export {
+    ORDER_OPTIONS,
+    PROJECT_SORT_OPTIONS,
+    REPORT_SORT_OPTIONS,
+    getProjects,
+    getProjectById,
+    getProjectReports,
+    createProject,
+    createReport,
+    updateProject,
+    updateReport,
+    deleteProject,
+    deleteReport
+};
