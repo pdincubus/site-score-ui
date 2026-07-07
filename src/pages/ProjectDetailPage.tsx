@@ -8,6 +8,7 @@ import { ModalDialog } from '../components/feedback/ModalDialog';
 import { EditProjectForm } from '../components/projects/EditProjectForm';
 import { CreateReportForm } from '../components/reports/CreateReportForm';
 import { EditReportForm } from '../components/reports/EditReportForm';
+import { ReportInsightsSummary } from '../components/reports/ReportInsightsSummary';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { PaginatedResponse, Project, Report } from '../types/api';
@@ -209,6 +210,7 @@ function ProjectDetailPage() {
                             <CreateReportForm
                                 variant='embedded'
                                 projectId={project.id}
+                                defaultPageSpeedUrl={project.url}
                                 onCreated={handleReportCreated}
                             />
                         ) : null}
@@ -329,6 +331,10 @@ function ProjectDetailPage() {
                                                             <dd>{report.uxScore}</dd>
                                                         </div>
                                                     </dl>
+
+                                                    {report.insights ? (
+                                                        <ReportInsightsSummary insights={report.insights} />
+                                                    ) : null}
                                                 </>
                                             )}
                                         </li>

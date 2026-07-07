@@ -63,12 +63,14 @@ Create a local env file in the project root.
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000
+VITE_ENABLE_PAGESPEED_IMPORT=false
 ```
 
 ### `.env.production`
 
 ```env
 VITE_API_BASE_URL=https://site-score-api.onrender.com
+VITE_ENABLE_PAGESPEED_IMPORT=false
 ```
 
 You should also add an `.env.example` file.
@@ -77,7 +79,18 @@ You should also add an `.env.example` file.
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000
+VITE_ENABLE_PAGESPEED_IMPORT=false
 ```
+
+### Optional PageSpeed import
+
+The report forms include a disabled-by-default PageSpeed import UI. Enable it only after the API repo exposes `POST /projects/:projectId/report-insight-imports`.
+
+```env
+VITE_ENABLE_PAGESPEED_IMPORT=true
+```
+
+The frontend never stores or reads a Google API key. PageSpeed and CrUX keys belong in the API service only.
 
 ## Local setup
 
