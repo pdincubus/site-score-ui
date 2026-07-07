@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { createReport } from '../../api/projects';
-import type { Report } from '../../types/api';
+import { isPageSpeedImportEnabled } from '../../config/features';
+import type { Report, ReportInsights } from '../../types/api';
 import { Alert } from '../feedback/Alert';
+import { PageSpeedImportControls } from './PageSpeedImportControls';
 import {
     REPORT_SUMMARY_MAX_LENGTH,
     REPORT_TITLE_MAX_LENGTH,
@@ -12,12 +14,14 @@ import {
 
 type CreateReportFormProps = {
     projectId: string;
+    defaultPageSpeedUrl?: string;
     onCreated: (report: Report) => void;
     variant?: 'card' | 'embedded';
 };
 
 function CreateReportForm({
     projectId,
+    defaultPageSpeedUrl = '',
     onCreated,
     variant = 'card'
 }: CreateReportFormProps) {
@@ -27,8 +31,10 @@ function CreateReportForm({
     const [performanceScore, setPerformanceScore] = useState('80');
     const [seoScore, setSeoScore] = useState('80');
     const [uxScore, setUxScore] = useState('80');
+    const [insights, setInsights] = useState<ReportInsights | null>(null);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const pageSpeedImportEnabled = isPageSpeedImportEnabled();
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -40,7 +46,8 @@ function CreateReportForm({
             accessibilityScore,
             performanceScore,
             seoScore,
-            uxScore
+            uxScore,
+            insights
         });
 
         if (!validation.data) {
@@ -59,12 +66,31 @@ function CreateReportForm({
             setPerformanceScore('80');
             setSeoScore('80');
             setUxScore('80');
+            setInsights(null);
 
             onCreated(report);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to create report');
         } finally {
             setIsSubmitting(false);
+        }
+    }
+
+    function handleScoresImported(scores: {
+        accessibilityScore?: string;
+        performanceScore?: string;
+        seoScore?: string;
+    }) {
+        if (scores.accessibilityScore !== undefined) {
+            setAccessibilityScore(scores.accessibilityScore);
+        }
+
+        if (scores.performanceScore !== undefined) {
+            setPerformanceScore(scores.performanceScore);
+        }
+
+        if (scores.seoScore !== undefined) {
+            setSeoScore(scores.seoScore);
         }
     }
 
@@ -147,6 +173,17 @@ function CreateReportForm({
                     />
                 </label>
             </div>
+
+            {pageSpeedImportEnabled ? (
+                <PageSpeedImportControls
+                    projectId={projectId}
+                    defaultUrl={defaultPageSpeedUrl}
+                    insights={insights}
+                    onImported={setInsights}
+                    onScoresImported={handleScoresImported}
+                    disabled={isSubmitting}
+                />
+            ) : null}
 
             {error ? (
                 <Alert variant='error' title='Could not create report'>

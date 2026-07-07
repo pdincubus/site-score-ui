@@ -3,6 +3,7 @@ import {
     getProjectById,
     getProjectReports,
     getProjects,
+    importReportInsights,
     updateReport
 } from './projects';
 import { setOnUnauthorized } from './client';
@@ -114,5 +115,50 @@ describe('project API helpers', () => {
         const [url] = fetchSpy.mock.calls[0] ?? [];
 
         expect(String(url)).toContain('/reports/report%2Fone');
+    });
+
+    it('encodes project ids when importing report insights', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    source: 'PAGESPEED',
+                    strategy: 'mobile',
+                    testedUrl: 'https://example.com/',
+                    finalUrl: 'https://example.com/',
+                    fetchedAt: '2026-01-01T00:00:00.000Z',
+                    lighthouseVersion: '13.0.0',
+                    scores: {
+                        performance: 94,
+                        accessibility: 98,
+                        bestPractices: 92,
+                        seo: 100
+                    },
+                    metrics: {},
+                    opportunities: []
+                }),
+                {
+                    status: 200,
+                    headers: { 'content-type': 'application/json' }
+                }
+            )
+        );
+
+        await importReportInsights('project/one', {
+            source: 'PAGESPEED',
+            url: 'https://example.com/',
+            strategy: 'mobile'
+        });
+
+        const [url, options] = fetchSpy.mock.calls[0] ?? [];
+
+        expect(String(url)).toContain('/projects/project%2Fone/report-insight-imports');
+        expect(options).toMatchObject({
+            method: 'POST',
+            body: JSON.stringify({
+                source: 'PAGESPEED',
+                url: 'https://example.com/',
+                strategy: 'mobile'
+            })
+        });
     });
 });

@@ -1,3 +1,5 @@
+import type { ReportInsights } from '../../types/api';
+
 const REPORT_TITLE_MAX_LENGTH = 160;
 const REPORT_SUMMARY_MAX_LENGTH = 500;
 const SCORE_MIN = 0;
@@ -22,6 +24,7 @@ type ReportScoreInput = {
 type ReportFormInput = ReportScoreInput & {
     title: string;
     summary: string;
+    insights?: ReportInsights | null;
 };
 
 type ReportFormData = {
@@ -31,6 +34,7 @@ type ReportFormData = {
     performanceScore: number;
     seoScore: number;
     uxScore: number;
+    insights?: ReportInsights | null;
 };
 
 type ReportFormValidationResult =
@@ -148,15 +152,21 @@ function validateReportForm(input: ReportFormInput): ReportFormValidationResult 
         };
     }
 
+    const data: ReportFormData = {
+        title,
+        summary,
+        accessibilityScore: accessibilityScore.value,
+        performanceScore: performanceScore.value,
+        seoScore: seoScore.value,
+        uxScore: uxScore.value
+    };
+
+    if (input.insights) {
+        data.insights = input.insights;
+    }
+
     return {
-        data: {
-            title,
-            summary,
-            accessibilityScore: accessibilityScore.value,
-            performanceScore: performanceScore.value,
-            seoScore: seoScore.value,
-            uxScore: uxScore.value
-        },
+        data,
         error: ''
     };
 }

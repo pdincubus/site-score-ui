@@ -6,7 +6,13 @@ import {
     normaliseLimit,
     normalisePage
 } from './query';
-import type { PaginatedResponse, Project, Report } from '../types/api';
+import type {
+    PaginatedResponse,
+    Project,
+    Report,
+    ReportInsights,
+    ReportInsightsImportInput
+} from '../types/api';
 
 const PROJECT_SORT_OPTIONS = ['createdAt', 'name'] as const;
 const REPORT_SORT_OPTIONS = ['createdAt', 'title'] as const;
@@ -36,6 +42,7 @@ type CreateReportInput = {
     performanceScore: number;
     seoScore: number;
     uxScore: number;
+    insights?: ReportInsights | null;
 };
 
 type UpdateProjectInput = {
@@ -79,6 +86,16 @@ function createReport(projectId: string, input: CreateReportInput) {
         method: 'POST',
         bodyJson: input
     });
+}
+
+function importReportInsights(projectId: string, input: ReportInsightsImportInput) {
+    return apiFetch<ReportInsights>(
+        `/projects/${encodePathSegment(projectId)}/report-insight-imports`,
+        {
+            method: 'POST',
+            bodyJson: input
+        }
+    );
 }
 
 function getProjects(options: GetProjectsOptions = {}) {
@@ -151,6 +168,7 @@ export {
     getProjectReports,
     createProject,
     createReport,
+    importReportInsights,
     updateProject,
     updateReport,
     deleteProject,

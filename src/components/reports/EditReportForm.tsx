@@ -21,7 +21,12 @@ type EditReportFormProps = {
     onCancel: () => void;
 };
 
-function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFormProps) {
+function EditReportForm({
+    report,
+    onUpdated,
+    onDeleted,
+    onCancel
+}: EditReportFormProps) {
     const confirmDialogRef = useRef<ConfirmDialogHandle | null>(null);
 
     const [title, setTitle] = useState(report.title);
