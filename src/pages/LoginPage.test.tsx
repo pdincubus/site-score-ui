@@ -23,7 +23,7 @@ vi.mock('../hooks/useDocumentTitle', () => ({
     useDocumentTitle: vi.fn()
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/useAuth', () => ({
     useAuth: () => ({
         login: loginMock,
         isAuthenticated: authState.isAuthenticated,
@@ -53,6 +53,17 @@ describe('LoginPage', () => {
         expect(passwordInput.value).toBe('');
     });
 
+    it('marks login fields as required', () => {
+        render(
+            <MemoryRouter>
+                <LoginPage />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByLabelText('Email')).toBeRequired();
+        expect(screen.getByLabelText('Password')).toBeRequired();
+    });
+
     it('submits credentials and navigates on successful login', async () => {
         loginMock.mockResolvedValue(undefined);
 
@@ -75,6 +86,29 @@ describe('LoginPage', () => {
         });
     });
 
+    it('trims email before submitting credentials', async () => {
+        loginMock.mockResolvedValue(undefined);
+
+        render(
+            <MemoryRouter>
+                <LoginPage />
+            </MemoryRouter>
+        );
+
+        fireEvent.change(screen.getByLabelText('Email'), {
+            target: { value: '  user@example.com  ' }
+        });
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret123' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
+
+        await waitFor(() => {
+            expect(loginMock).toHaveBeenCalledWith({
+                email: 'user@example.com',
+                password: 'secret123'
+            });
+        });
+    });
+
     it('shows an error message when login fails', async () => {
         loginMock.mockRejectedValue(new Error('Invalid credentials'));
 
@@ -90,5 +124,33 @@ describe('LoginPage', () => {
 
         expect(await screen.findByText('Invalid credentials')).toBeInTheDocument();
         expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    it('disables submit button while login is pending and restores it after completion', async () => {
+        let resolveLogin: () => void = () => undefined;
+        loginMock.mockImplementation(
+            () =>
+                new Promise<void>((resolve) => {
+                    resolveLogin = resolve;
+                })
+        );
+
+        render(
+            <MemoryRouter>
+                <LoginPage />
+            </MemoryRouter>
+        );
+
+        fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'user@example.com' } });
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret123' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
+
+        expect(screen.getByRole('button', { name: 'Logging in...' })).toBeDisabled();
+
+        resolveLogin();
+
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: 'Log in' })).not.toBeDisabled();
+        });
     });
 });

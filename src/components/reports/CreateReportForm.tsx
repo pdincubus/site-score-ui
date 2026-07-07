@@ -1,16 +1,27 @@
 import { useState } from 'react';
 import { createReport } from '../../api/projects';
-import type { Report } from '../../types/api';
+import { isPageSpeedImportEnabled } from '../../config/features';
+import type { Report, ReportInsights } from '../../types/api';
 import { Alert } from '../feedback/Alert';
+import { PageSpeedImportControls } from './PageSpeedImportControls';
+import {
+    REPORT_SUMMARY_MAX_LENGTH,
+    REPORT_TITLE_MAX_LENGTH,
+    SCORE_MAX,
+    SCORE_MIN,
+    validateReportForm
+} from './reportFormValidation';
 
 type CreateReportFormProps = {
     projectId: string;
+    defaultPageSpeedUrl?: string;
     onCreated: (report: Report) => void;
     variant?: 'card' | 'embedded';
 };
 
 function CreateReportForm({
     projectId,
+    defaultPageSpeedUrl = '',
     onCreated,
     variant = 'card'
 }: CreateReportFormProps) {
@@ -20,23 +31,34 @@ function CreateReportForm({
     const [performanceScore, setPerformanceScore] = useState('80');
     const [seoScore, setSeoScore] = useState('80');
     const [uxScore, setUxScore] = useState('80');
+    const [insights, setInsights] = useState<ReportInsights | null>(null);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const pageSpeedImportEnabled = isPageSpeedImportEnabled();
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError('');
+
+        const validation = validateReportForm({
+            title,
+            summary,
+            accessibilityScore,
+            performanceScore,
+            seoScore,
+            uxScore,
+            insights
+        });
+
+        if (!validation.data) {
+            setError(validation.error);
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const report = await createReport(projectId, {
-                title,
-                summary,
-                accessibilityScore: Number(accessibilityScore),
-                performanceScore: Number(performanceScore),
-                seoScore: Number(seoScore),
-                uxScore: Number(uxScore)
-            });
+            const report = await createReport(projectId, validation.data);
 
             setTitle('');
             setSummary('');
@@ -44,12 +66,31 @@ function CreateReportForm({
             setPerformanceScore('80');
             setSeoScore('80');
             setUxScore('80');
+            setInsights(null);
 
             onCreated(report);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to create report');
         } finally {
             setIsSubmitting(false);
+        }
+    }
+
+    function handleScoresImported(scores: {
+        accessibilityScore?: string;
+        performanceScore?: string;
+        seoScore?: string;
+    }) {
+        if (scores.accessibilityScore !== undefined) {
+            setAccessibilityScore(scores.accessibilityScore);
+        }
+
+        if (scores.performanceScore !== undefined) {
+            setPerformanceScore(scores.performanceScore);
+        }
+
+        if (scores.seoScore !== undefined) {
+            setSeoScore(scores.seoScore);
         }
     }
 
@@ -62,6 +103,8 @@ function CreateReportForm({
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
                     placeholder='Homepage audit'
+                    required
+                    maxLength={REPORT_TITLE_MAX_LENGTH}
                 />
             </label>
 
@@ -72,6 +115,8 @@ function CreateReportForm({
                     value={summary}
                     onChange={(event) => setSummary(event.target.value)}
                     placeholder='Short summary'
+                    required
+                    maxLength={REPORT_SUMMARY_MAX_LENGTH}
                 />
             </label>
 
@@ -80,10 +125,12 @@ function CreateReportForm({
                     <span>Accessibility</span>
                     <input
                         type='number'
-                        min='0'
-                        max='100'
+                        min={SCORE_MIN}
+                        max={SCORE_MAX}
+                        step='1'
                         value={accessibilityScore}
                         onChange={(event) => setAccessibilityScore(event.target.value)}
+                        required
                     />
                 </label>
 
@@ -91,10 +138,12 @@ function CreateReportForm({
                     <span>Performance</span>
                     <input
                         type='number'
-                        min='0'
-                        max='100'
+                        min={SCORE_MIN}
+                        max={SCORE_MAX}
+                        step='1'
                         value={performanceScore}
                         onChange={(event) => setPerformanceScore(event.target.value)}
+                        required
                     />
                 </label>
 
@@ -102,10 +151,12 @@ function CreateReportForm({
                     <span>SEO</span>
                     <input
                         type='number'
-                        min='0'
-                        max='100'
+                        min={SCORE_MIN}
+                        max={SCORE_MAX}
+                        step='1'
                         value={seoScore}
                         onChange={(event) => setSeoScore(event.target.value)}
+                        required
                     />
                 </label>
 
@@ -113,13 +164,26 @@ function CreateReportForm({
                     <span>UX</span>
                     <input
                         type='number'
-                        min='0'
-                        max='100'
+                        min={SCORE_MIN}
+                        max={SCORE_MAX}
+                        step='1'
                         value={uxScore}
                         onChange={(event) => setUxScore(event.target.value)}
+                        required
                     />
                 </label>
             </div>
+
+            {pageSpeedImportEnabled ? (
+                <PageSpeedImportControls
+                    projectId={projectId}
+                    defaultUrl={defaultPageSpeedUrl}
+                    insights={insights}
+                    onImported={setInsights}
+                    onScoresImported={handleScoresImported}
+                    disabled={isSubmitting}
+                />
+            ) : null}
 
             {error ? (
                 <Alert variant='error' title='Could not create report'>

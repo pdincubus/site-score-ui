@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 function AppShell({ children }: { children: ReactNode }) {
     const { user, isAuthenticated, logout } = useAuth();

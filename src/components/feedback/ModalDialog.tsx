@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 type ModalDialogProps = {
     title: string;
@@ -9,6 +9,7 @@ type ModalDialogProps = {
 
 function ModalDialog({ title, children, open, onClose }: ModalDialogProps) {
     const dialogRef = useRef<HTMLDialogElement | null>(null);
+    const titleId = useId();
 
     useEffect(() => {
         const el = dialogRef.current;
@@ -26,12 +27,12 @@ function ModalDialog({ title, children, open, onClose }: ModalDialogProps) {
         <dialog
             ref={dialogRef}
             className='confirm-dialog modal-dialog'
-            aria-labelledby='modal-dialog-title'
+            aria-labelledby={titleId}
             onClose={onClose}
         >
             <div className='confirm-dialog__content'>
                 <div className='modal-dialog__header'>
-                    <h2 id='modal-dialog-title'>{title}</h2>
+                    <h2 id={titleId}>{title}</h2>
                     <button
                         type='button'
                         className='modal-dialog__close'

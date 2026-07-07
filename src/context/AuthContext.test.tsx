@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AuthProvider, useAuth } from './AuthContext';
+import { AuthProvider } from './AuthContext';
+import { useAuth } from './useAuth';
 import * as authApi from '../api/auth';
 import { setOnUnauthorized } from '../api/client';
 import { apiFetch } from '../api/client';
@@ -12,7 +13,7 @@ vi.mock('../api/auth', () => ({
 }));
 
 function AuthHarness() {
-    const { user, isAuthenticated, isLoading, logout } = useAuth();
+    const { user, isAuthenticated, isLoading, login, logout } = useAuth();
 
     return (
         <div>
@@ -25,6 +26,14 @@ function AuthHarness() {
                 }}
             >
                 Logout
+            </button>
+            <button
+                type='button'
+                onClick={() => {
+                    void login({ email: 'new@example.com', password: 'pass123' }).catch(() => undefined);
+                }}
+            >
+                Login
             </button>
         </div>
     );
@@ -160,5 +169,65 @@ describe('AuthContext', () => {
 
         const combinedErrors = consoleErrorSpy.mock.calls.map((call) => String(call[0])).join('\n');
         expect(combinedErrors).not.toContain("Can't perform a React state update on an unmounted component");
+    });
+
+    it('starts loading then resolves to authenticated when current user fetch succeeds', async () => {
+        vi.mocked(authApi.getCurrentUser).mockResolvedValue({
+            id: 'u1',
+            name: 'Test User',
+            email: 'test@example.com',
+            createdAt: '2026-01-01T00:00:00.000Z'
+        });
+
+        render(
+            <AuthProvider>
+                <AuthHarness />
+            </AuthProvider>
+        );
+
+        expect(screen.getByText('loading')).toBeInTheDocument();
+        expect(await screen.findByText('ready')).toBeInTheDocument();
+        expect(screen.getByText('signed-in:test@example.com')).toBeInTheDocument();
+    });
+
+    it('sets authenticated state after successful login', async () => {
+        vi.mocked(authApi.getCurrentUser).mockRejectedValue(new Error('Unauthorized'));
+        vi.mocked(authApi.login).mockResolvedValue({
+            id: 'u2',
+            name: 'New User',
+            email: 'new@example.com',
+            createdAt: '2026-01-01T00:00:00.000Z'
+        });
+
+        render(
+            <AuthProvider>
+                <AuthHarness />
+            </AuthProvider>
+        );
+
+        await screen.findByText('signed-out');
+        fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+
+        await waitFor(() => {
+            expect(screen.getByText('signed-in:new@example.com')).toBeInTheDocument();
+        });
+    });
+
+    it('keeps signed-out state when login fails', async () => {
+        vi.mocked(authApi.getCurrentUser).mockRejectedValue(new Error('Unauthorized'));
+        vi.mocked(authApi.login).mockRejectedValue(new Error('Invalid credentials'));
+
+        render(
+            <AuthProvider>
+                <AuthHarness />
+            </AuthProvider>
+        );
+
+        await screen.findByText('signed-out');
+        fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+
+        await waitFor(() => {
+            expect(screen.getByText('signed-out')).toBeInTheDocument();
+        });
     });
 });

@@ -6,6 +6,13 @@ import {
     ConfirmDialog,
     type ConfirmDialogHandle
 } from '../feedback/ConfirmDialog';
+import {
+    REPORT_SUMMARY_MAX_LENGTH,
+    REPORT_TITLE_MAX_LENGTH,
+    SCORE_MAX,
+    SCORE_MIN,
+    validateReportForm
+} from './reportFormValidation';
 
 type EditReportFormProps = {
     report: Report;
@@ -14,7 +21,12 @@ type EditReportFormProps = {
     onCancel: () => void;
 };
 
-function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFormProps) {
+function EditReportForm({
+    report,
+    onUpdated,
+    onDeleted,
+    onCancel
+}: EditReportFormProps) {
     const confirmDialogRef = useRef<ConfirmDialogHandle | null>(null);
 
     const [title, setTitle] = useState(report.title);
@@ -39,17 +51,25 @@ function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFo
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError('');
+
+        const validation = validateReportForm({
+            title,
+            summary,
+            accessibilityScore,
+            performanceScore,
+            seoScore,
+            uxScore
+        });
+
+        if (!validation.data) {
+            setError(validation.error);
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const updatedReport = await updateReport(report.id, {
-                title,
-                summary,
-                accessibilityScore: Number(accessibilityScore),
-                performanceScore: Number(performanceScore),
-                seoScore: Number(seoScore),
-                uxScore: Number(uxScore)
-            });
+            const updatedReport = await updateReport(report.id, validation.data);
 
             onUpdated(updatedReport);
         } catch (err) {
@@ -94,6 +114,8 @@ function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFo
                         type='text'
                         value={title}
                         onChange={(event) => setTitle(event.target.value)}
+                        required
+                        maxLength={REPORT_TITLE_MAX_LENGTH}
                     />
                 </label>
 
@@ -103,6 +125,8 @@ function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFo
                         type='text'
                         value={summary}
                         onChange={(event) => setSummary(event.target.value)}
+                        required
+                        maxLength={REPORT_SUMMARY_MAX_LENGTH}
                     />
                 </label>
 
@@ -111,10 +135,12 @@ function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFo
                         <span>Accessibility</span>
                         <input
                             type='number'
-                            min='0'
-                            max='100'
+                            min={SCORE_MIN}
+                            max={SCORE_MAX}
+                            step='1'
                             value={accessibilityScore}
                             onChange={(event) => setAccessibilityScore(event.target.value)}
+                            required
                         />
                     </label>
 
@@ -122,10 +148,12 @@ function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFo
                         <span>Performance</span>
                         <input
                             type='number'
-                            min='0'
-                            max='100'
+                            min={SCORE_MIN}
+                            max={SCORE_MAX}
+                            step='1'
                             value={performanceScore}
                             onChange={(event) => setPerformanceScore(event.target.value)}
+                            required
                         />
                     </label>
 
@@ -133,10 +161,12 @@ function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFo
                         <span>SEO</span>
                         <input
                             type='number'
-                            min='0'
-                            max='100'
+                            min={SCORE_MIN}
+                            max={SCORE_MAX}
+                            step='1'
                             value={seoScore}
                             onChange={(event) => setSeoScore(event.target.value)}
+                            required
                         />
                     </label>
 
@@ -144,10 +174,12 @@ function EditReportForm({ report, onUpdated, onDeleted, onCancel }: EditReportFo
                         <span>UX</span>
                         <input
                             type='number'
-                            min='0'
-                            max='100'
+                            min={SCORE_MIN}
+                            max={SCORE_MAX}
+                            step='1'
                             value={uxScore}
                             onChange={(event) => setUxScore(event.target.value)}
+                            required
                         />
                     </label>
                 </div>

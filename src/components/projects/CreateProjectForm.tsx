@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { createProject } from '../../api/projects';
 import type { Project } from '../../types/api';
 import { Alert } from '../feedback/Alert';
+import {
+    PROJECT_NAME_MAX_LENGTH,
+    PROJECT_URL_MAX_LENGTH,
+    PROJECT_URL_PATTERN,
+    validateProjectForm
+} from './projectFormValidation';
 
 type CreateProjectFormProps = {
     onCreated: (project: Project) => void;
@@ -17,13 +23,21 @@ function CreateProjectForm({ onCreated, variant = 'card' }: CreateProjectFormPro
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError('');
+
+        const validation = validateProjectForm({
+            name,
+            url
+        });
+
+        if (!validation.data) {
+            setError(validation.error);
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const project = await createProject({
-                name,
-                url
-            });
+            const project = await createProject(validation.data);
 
             setName('');
             setUrl('');
@@ -36,37 +50,42 @@ function CreateProjectForm({ onCreated, variant = 'card' }: CreateProjectFormPro
     }
 
     const form = (
-            <form onSubmit={handleSubmit} className='form-stack'>
-                <label>
-                    <span>Name</span>
-                    <input
-                        type='text'
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        placeholder='Project name'
-                    />
-                </label>
+        <form onSubmit={handleSubmit} className='form-stack'>
+            <label>
+                <span>Name</span>
+                <input
+                    type='text'
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder='Project name'
+                    required
+                    maxLength={PROJECT_NAME_MAX_LENGTH}
+                />
+            </label>
 
-                <label>
-                    <span>URL</span>
-                    <input
-                        type='url'
-                        value={url}
-                        onChange={(event) => setUrl(event.target.value)}
-                        placeholder='https://example.com'
-                    />
-                </label>
+            <label>
+                <span>URL</span>
+                <input
+                    type='url'
+                    value={url}
+                    onChange={(event) => setUrl(event.target.value)}
+                    placeholder='https://example.com'
+                    required
+                    maxLength={PROJECT_URL_MAX_LENGTH}
+                    pattern={PROJECT_URL_PATTERN}
+                />
+            </label>
 
-                {error ? (
-                    <Alert variant='error' title='Could not create project'>
-                        {error}
-                    </Alert>
-                ) : null}
+            {error ? (
+                <Alert variant='error' title='Could not create project'>
+                    {error}
+                </Alert>
+            ) : null}
 
-                <button type='submit' disabled={isSubmitting}>
-                    {isSubmitting ? 'Creating project...' : 'Create project'}
-                </button>
-            </form>
+            <button type='submit' disabled={isSubmitting}>
+                {isSubmitting ? 'Creating project...' : 'Create project'}
+            </button>
+        </form>
     );
 
     if (variant === 'embedded') {
