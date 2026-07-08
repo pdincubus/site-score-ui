@@ -122,6 +122,13 @@ function CreateReportForm({
             if (groupValidation?.data) {
                 nextGroup = await createReportGroup(projectId, groupValidation.data);
                 nextGroupId = nextGroup.id;
+
+                if (!nextGroupId) {
+                    throw new Error(
+                        'The report group was created without an id. Refresh and try again.'
+                    );
+                }
+
                 onGroupCreated?.(nextGroup);
             }
 
@@ -433,7 +440,14 @@ function CreateReportForm({
                 </label>
             </div>
 
-            {insights ? <ReportInsightsSummary insights={insights} /> : null}
+            {insights ? (
+                <div className='report-import-result'>
+                    <p className='report-import-result__status' role='status'>
+                        PageSpeed data imported
+                    </p>
+                    <ReportInsightsSummary insights={insights} tone='light' />
+                </div>
+            ) : null}
 
             {error ? (
                 <Alert variant='error' title='Could not create report'>

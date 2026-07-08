@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+    createReport,
     createReportGroup,
     getProjectById,
     getProjectReportGroups,
@@ -120,6 +121,34 @@ describe('project API helpers', () => {
         expect(String(url)).toContain('/projects/project%2Fone/report-groups');
     });
 
+    it('normalises report group id aliases from the API response', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(
+                JSON.stringify([
+                    {
+                        groupId: 'group-one',
+                        projectId: 'project/one',
+                        name: 'Homepage mobile',
+                        pageUrl: 'https://example.com/',
+                        strategy: 'mobile',
+                        createdAt: '2026-01-01T00:00:00.000Z'
+                    }
+                ]),
+                {
+                    status: 200,
+                    headers: { 'content-type': 'application/json' }
+                }
+            )
+        );
+
+        const groups = await getProjectReportGroups('project/one');
+
+        expect(groups[0]).toMatchObject({
+            id: 'group-one',
+            name: 'Homepage mobile'
+        });
+    });
+
     it('encodes project and group ids when loading report group trends', async () => {
         const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
             new Response(JSON.stringify([]), {
@@ -172,6 +201,88 @@ describe('project API helpers', () => {
                 name: 'Homepage mobile',
                 pageUrl: 'https://example.com/',
                 strategy: 'mobile'
+            })
+        });
+    });
+
+    it('normalises created report group id aliases from the API response', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    groupId: 'group-one',
+                    projectId: 'project/one',
+                    name: 'Homepage mobile',
+                    pageUrl: 'https://example.com/',
+                    strategy: 'mobile',
+                    createdAt: '2026-01-01T00:00:00.000Z'
+                }),
+                {
+                    status: 200,
+                    headers: { 'content-type': 'application/json' }
+                }
+            )
+        );
+
+        const group = await createReportGroup('project/one', {
+            name: 'Homepage mobile',
+            pageUrl: 'https://example.com/',
+            strategy: 'mobile'
+        });
+
+        expect(group.id).toBe('group-one');
+    });
+
+    it('serialises report create payloads with the selected group id', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    id: 'report-one',
+                    projectId: 'project-one',
+                    groupId: 'group-one',
+                    title: 'Report One',
+                    summary: 'Summary',
+                    pageUrl: 'https://example.com/',
+                    performanceScore: 90,
+                    accessibilityScore: 90,
+                    seoScore: 90,
+                    bestPracticesScore: 90,
+                    agenticBrowsingScore: 90,
+                    createdAt: '2026-01-01T00:00:00.000Z'
+                }),
+                {
+                    status: 201,
+                    headers: { 'content-type': 'application/json' }
+                }
+            )
+        );
+
+        await createReport('project/one', {
+            groupId: 'group-one',
+            title: 'Report One',
+            summary: 'Summary',
+            pageUrl: 'https://example.com/',
+            performanceScore: 90,
+            accessibilityScore: 90,
+            seoScore: 90,
+            bestPracticesScore: 90,
+            agenticBrowsingScore: 90
+        });
+
+        const [url, options] = fetchSpy.mock.calls[0] ?? [];
+
+        expect(String(url)).toContain('/projects/project%2Fone/reports');
+        expect(options).toMatchObject({
+            method: 'POST',
+            body: JSON.stringify({
+                groupId: 'group-one',
+                title: 'Report One',
+                summary: 'Summary',
+                pageUrl: 'https://example.com/',
+                performanceScore: 90,
+                accessibilityScore: 90,
+                seoScore: 90,
+                bestPracticesScore: 90,
+                agenticBrowsingScore: 90
             })
         });
     });

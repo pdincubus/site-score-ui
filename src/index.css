@@ -753,6 +753,22 @@ button:hover:not(:disabled) {
   border-top: 1px solid var(--color-dark-border);
 }
 
+.report-import-result {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--color-cool-border);
+  border-radius: 8px;
+  background: var(--color-white);
+}
+
+.report-import-result__status {
+  margin: 0;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
 .page-speed-import .report-insights {
   margin-top: 0;
   padding-top: 0;
@@ -970,6 +986,63 @@ button:hover:not(:disabled) {
 .report-insights li,
 .report-insights .muted-text {
   overflow-wrap: anywhere;
+}
+
+.report-insights--light {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  color: var(--color-primary);
+}
+
+.report-insights--light .report-insights__metrics div {
+  border-color: var(--color-cool-border);
+  background: var(--color-cream);
+}
+
+.report-insights--light .report-insights__metrics dt,
+.report-insights--light .report-insights__meta dt {
+  color: #5d536b;
+}
+
+.report-insights--light .report-insights__metrics dd {
+  color: var(--color-primary);
+}
+
+.report-insights--light .report-insights__meta dd,
+.report-insights--light .report-insights__category,
+.report-insights--light .report-insights__audit-value,
+.report-insights--light .report-insights__timing-value {
+  color: #5d536b;
+}
+
+.report-insights--light .report-insights__details {
+  border-top-color: var(--color-cool-border);
+}
+
+.report-insights--light .report-insights__details summary,
+.report-insights--light .report-insights__timing-name {
+  color: var(--color-primary);
+}
+
+.report-insights--light .report-insights__severity {
+  border-color: var(--color-cool-border);
+  color: var(--color-primary);
+}
+
+.report-insights--light .metric-delta--improved {
+  background: rgb(66 96 0 / 10%);
+  color: #426000;
+}
+
+.report-insights--light .metric-delta--declined {
+  background: rgb(143 31 67 / 10%);
+  color: #8f1f43;
+}
+
+.report-insights--light .metric-delta--unchanged {
+  background: rgb(93 83 107 / 10%);
+  color: #5d536b;
 }
 
 .button-row {

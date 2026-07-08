@@ -57,6 +57,10 @@ type CreateReportGroupInput = {
     strategy: ReportGroup['strategy'];
 };
 
+type ReportGroupResponse = ReportGroup & {
+    groupId?: string;
+};
+
 type UpdateProjectInput = {
     name?: string;
     url?: string;
@@ -108,14 +112,23 @@ function createReport(projectId: string, input: CreateReportInput) {
     });
 }
 
-function createReportGroup(projectId: string, input: CreateReportGroupInput) {
-    return apiFetch<ReportGroup>(
+function normaliseReportGroup(response: ReportGroupResponse): ReportGroup {
+    return {
+        ...response,
+        id: response.id || response.groupId || ''
+    };
+}
+
+async function createReportGroup(projectId: string, input: CreateReportGroupInput) {
+    const group = await apiFetch<ReportGroupResponse>(
         `/projects/${encodePathSegment(projectId)}/report-groups`,
         {
             method: 'POST',
             bodyJson: input
         }
     );
+
+    return normaliseReportGroup(group);
 }
 
 function importReportInsights(projectId: string, input: ReportInsightsImportInput) {
@@ -150,8 +163,12 @@ function getProjectById(id: string) {
     return apiFetch<Project>(`/projects/${encodePathSegment(id)}`);
 }
 
-function getProjectReportGroups(id: string) {
-    return apiFetch<ReportGroup[]>(`/projects/${encodePathSegment(id)}/report-groups`);
+async function getProjectReportGroups(id: string) {
+    const groups = await apiFetch<ReportGroupResponse[]>(
+        `/projects/${encodePathSegment(id)}/report-groups`
+    );
+
+    return groups.map(normaliseReportGroup);
 }
 
 function getProjectReportGroupTrends(

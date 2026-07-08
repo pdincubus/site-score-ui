@@ -260,6 +260,36 @@ describe('CreateReportForm', () => {
         });
     });
 
+    it('stops before creating a report when the created group response has no id', async () => {
+        vi.mocked(createReportGroup).mockResolvedValue({
+            ...homepageMobileGroup,
+            id: ''
+        });
+
+        render(<CreateReportForm projectId='project-1' onCreated={vi.fn()} />);
+
+        fireEvent.change(screen.getByLabelText('Group name'), {
+            target: { value: 'Homepage mobile' }
+        });
+        fireEvent.change(screen.getByLabelText('Group page URL'), {
+            target: { value: 'https://example.com/' }
+        });
+        fireEvent.change(screen.getByLabelText('Title'), {
+            target: { value: 'Homepage audit' }
+        });
+        fireEvent.change(screen.getByLabelText('Summary'), {
+            target: { value: 'Summary' }
+        });
+        fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
+
+        expect(
+            await screen.findByText(
+                'The report group was created without an id. Refresh and try again.'
+            )
+        ).toBeInTheDocument();
+        expect(createReport).not.toHaveBeenCalled();
+    });
+
     it('imports PageSpeed scores when the feature flag is enabled', async () => {
         const onCreated = vi.fn();
         vi.stubEnv('VITE_ENABLE_PAGESPEED_IMPORT', 'true');
@@ -310,6 +340,7 @@ describe('CreateReportForm', () => {
         expect(screen.getByLabelText('SEO')).toHaveValue(100);
         expect(screen.getByLabelText('Best practices')).toHaveValue(92);
         expect(screen.getByLabelText('Agentic browsing')).toHaveValue(89);
+        expect(screen.getByText('PageSpeed data imported')).toBeInTheDocument();
 
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: 'Homepage audit' }
@@ -364,6 +395,25 @@ describe('CreateReportForm', () => {
                     displayValue: undefined,
                     score: 0.5,
                     overallSavingsMs: 300
+                }
+            ],
+            auditRefs: [
+                {
+                    id: 'tap-targets',
+                    title: 'Tap targets are not sized appropriately',
+                    category: 'seo',
+                    severity: 'fail',
+                    displayValue: undefined,
+                    score: 0
+                }
+            ],
+            userTimings: [
+                {
+                    name: 'app:hydrate',
+                    entryType: 'measure',
+                    startTime: 690,
+                    duration: undefined,
+                    displayValue: undefined
                 }
             ]
         } as unknown as ReportInsights;
@@ -429,6 +479,17 @@ describe('CreateReportForm', () => {
                         fieldData: null,
                         opportunities: [
                             expect.objectContaining({
+                                displayValue: null
+                            })
+                        ],
+                        auditRefs: [
+                            expect.objectContaining({
+                                displayValue: null
+                            })
+                        ],
+                        userTimings: [
+                            expect.objectContaining({
+                                duration: null,
                                 displayValue: null
                             })
                         ]

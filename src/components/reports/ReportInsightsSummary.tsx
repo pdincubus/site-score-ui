@@ -22,6 +22,7 @@ type ReportInsightsSummaryProps = {
     insights: ReportInsights;
     previousInsights?: ReportInsights | null;
     userTimingComparisons?: ReportInsightUserTimingComparison[];
+    tone?: 'dark' | 'light';
 };
 
 function formatBytes(value: number) {
@@ -255,7 +256,8 @@ function getUserTimingComparison(
 function ReportInsightsSummary({
     insights,
     previousInsights = null,
-    userTimingComparisons = []
+    userTimingComparisons = [],
+    tone = 'dark'
 }: ReportInsightsSummaryProps) {
     const metaItems: Array<[string, string]> = [];
 
@@ -297,7 +299,10 @@ function ReportInsightsSummary({
     );
 
     return (
-        <section className='report-insights' aria-label='Imported PageSpeed data'>
+        <section
+            className={`report-insights report-insights--${tone}`}
+            aria-label='Imported PageSpeed data'
+        >
             {visibleMetrics.length > 0 ? (
                 <dl className='report-insights__metrics'>
                     {visibleMetrics.map(({ key, label, metric, previousMetric }) => {
