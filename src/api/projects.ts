@@ -9,7 +9,10 @@ import {
 import type {
     PaginatedResponse,
     Project,
+    ProjectListItem,
     Report,
+    ReportGroup,
+    ReportGroupTrend,
     ReportInsights,
     ReportInsightsImportInput
 } from '../types/api';
@@ -36,13 +39,22 @@ type CreateProjectInput = {
 };
 
 type CreateReportInput = {
+    groupId: string;
     title: string;
     summary: string;
-    accessibilityScore: number;
+    pageUrl: string;
     performanceScore: number;
+    accessibilityScore: number;
     seoScore: number;
-    uxScore: number;
+    bestPracticesScore: number;
+    agenticBrowsingScore: number;
     insights?: ReportInsights | null;
+};
+
+type CreateReportGroupInput = {
+    name: string;
+    pageUrl: string;
+    strategy: ReportGroup['strategy'];
 };
 
 type UpdateProjectInput = {
@@ -51,12 +63,15 @@ type UpdateProjectInput = {
 };
 
 type UpdateReportInput = {
+    groupId?: string;
     title?: string;
     summary?: string;
-    accessibilityScore?: number;
+    pageUrl?: string;
     performanceScore?: number;
+    accessibilityScore?: number;
     seoScore?: number;
-    uxScore?: number;
+    bestPracticesScore?: number;
+    agenticBrowsingScore?: number;
 };
 
 type GetProjectReportsOptions = {
@@ -65,6 +80,11 @@ type GetProjectReportsOptions = {
     search?: string;
     sort?: ReportSort;
     order?: SortOrder;
+    groupId?: string;
+};
+
+type GetProjectReportGroupTrendsOptions = {
+    groupId?: string;
 };
 
 function updateReport(id: string, input: UpdateReportInput) {
@@ -86,6 +106,16 @@ function createReport(projectId: string, input: CreateReportInput) {
         method: 'POST',
         bodyJson: input
     });
+}
+
+function createReportGroup(projectId: string, input: CreateReportGroupInput) {
+    return apiFetch<ReportGroup>(
+        `/projects/${encodePathSegment(projectId)}/report-groups`,
+        {
+            method: 'POST',
+            bodyJson: input
+        }
+    );
 }
 
 function importReportInsights(projectId: string, input: ReportInsightsImportInput) {
@@ -113,11 +143,28 @@ function getProjects(options: GetProjectsOptions = {}) {
                 : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc')
     });
 
-    return apiFetch<PaginatedResponse<Project>>(`/projects${query}`);
+    return apiFetch<PaginatedResponse<ProjectListItem>>(`/projects${query}`);
 }
 
 function getProjectById(id: string) {
     return apiFetch<Project>(`/projects/${encodePathSegment(id)}`);
+}
+
+function getProjectReportGroups(id: string) {
+    return apiFetch<ReportGroup[]>(`/projects/${encodePathSegment(id)}/report-groups`);
+}
+
+function getProjectReportGroupTrends(
+    id: string,
+    options: GetProjectReportGroupTrendsOptions = {}
+) {
+    const query = buildQuery({
+        groupId: options.groupId
+    });
+
+    return apiFetch<ReportGroupTrend[]>(
+        `/projects/${encodePathSegment(id)}/report-group-trends${query}`
+    );
 }
 
 function getProjectReports(id: string, options: GetProjectReportsOptions = {}) {
@@ -132,7 +179,8 @@ function getProjectReports(id: string, options: GetProjectReportsOptions = {}) {
         order:
             options.order === undefined
                 ? undefined
-                : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc')
+                : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc'),
+        groupId: options.groupId
     });
 
     return apiFetch<PaginatedResponse<Report>>(
@@ -165,8 +213,11 @@ export {
     REPORT_SORT_OPTIONS,
     getProjects,
     getProjectById,
+    getProjectReportGroups,
+    getProjectReportGroupTrends,
     getProjectReports,
     createProject,
+    createReportGroup,
     createReport,
     importReportInsights,
     updateProject,

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ORDER_OPTIONS, REPORT_SORT_OPTIONS, getProjectById, getProjectReports } from '../api/projects';
+import {
+    ORDER_OPTIONS,
+    REPORT_SORT_OPTIONS,
+    getProjectById,
+    getProjectReportGroups,
+    getProjectReportGroupTrends,
+    getProjectReports
+} from '../api/projects';
 import { normaliseAllowedValue, normaliseLimit, normalisePage } from '../api/query';
 import { Alert } from '../components/feedback/Alert';
 import { Loading } from '../components/feedback/Loading';
@@ -8,10 +15,199 @@ import { ModalDialog } from '../components/feedback/ModalDialog';
 import { EditProjectForm } from '../components/projects/EditProjectForm';
 import { CreateReportForm } from '../components/reports/CreateReportForm';
 import { EditReportForm } from '../components/reports/EditReportForm';
+import { ReportGroupTrendChart } from '../components/reports/ReportGroupTrendChart';
 import { ReportInsightsSummary } from '../components/reports/ReportInsightsSummary';
+import { SCORE_ITEMS, type ScoreKey } from '../components/reports/reportScores';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import type { PaginatedResponse, Project, Report } from '../types/api';
+import type { PaginatedResponse, Project, Report, ReportGroup, ReportGroupTrend } from '../types/api';
+
+type ReportSection = {
+    key: string;
+    name: string;
+    reports: Report[];
+};
+
+type ReportScoreComparison = Partial<Record<ScoreKey, number>>;
+
+function formatReportDate(value: string) {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat('en-GB', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+    }).format(date);
+}
+
+function getReportGroupName(report: Report, groups: ReportGroup[]) {
+    return (
+        report.group?.name ||
+        groups.find((group) => group.id === report.groupId)?.name ||
+        'Ungrouped'
+    );
+}
+
+function getReportSections(reports: Report[], groups: ReportGroup[], shouldGroup: boolean) {
+    if (!shouldGroup) {
+        return [
+            {
+                key: 'filtered',
+                name: '',
+                reports
+            }
+        ];
+    }
+
+    const sections: ReportSection[] = [];
+
+    for (const report of reports) {
+        const key = report.groupId || 'ungrouped';
+        const existingSection = sections.find((section) => section.key === key);
+
+        if (existingSection) {
+            existingSection.reports.push(report);
+            continue;
+        }
+
+        sections.push({
+            key,
+            name: getReportGroupName(report, groups),
+            reports: [report]
+        });
+    }
+
+    return sections;
+}
+
+function getTrendMap(trends: ReportGroupTrend[]) {
+    return new Map(trends.map((trend) => [trend.groupId, trend]));
+}
+
+function getReportTimestamp(report: Report) {
+    const timestamp = new Date(report.createdAt).getTime();
+
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function getReportComparisonMap(reports: Report[]) {
+    const comparisons = new Map<string, ReportScoreComparison>();
+    const reportsByGroup = new Map<string, Report[]>();
+    const reportsWithApiComparison = new Set<string>();
+
+    for (const report of reports) {
+        if (report.comparison !== undefined) {
+            reportsWithApiComparison.add(report.id);
+
+            if (report.comparison) {
+                comparisons.set(report.id, report.comparison.scores);
+            }
+        }
+
+        const key = report.groupId || 'ungrouped';
+        const groupReports = reportsByGroup.get(key) || [];
+
+        groupReports.push(report);
+        reportsByGroup.set(key, groupReports);
+    }
+
+    for (const groupReports of reportsByGroup.values()) {
+        const chronologicalReports = [...groupReports].sort((firstReport, secondReport) => {
+            const timestampDifference =
+                getReportTimestamp(firstReport) - getReportTimestamp(secondReport);
+
+            return timestampDifference === 0
+                ? firstReport.id.localeCompare(secondReport.id)
+                : timestampDifference;
+        });
+
+        for (let index = 1; index < chronologicalReports.length; index += 1) {
+            const report = chronologicalReports[index];
+            const previousReport = chronologicalReports[index - 1];
+            const comparison: ReportScoreComparison = {};
+
+            if (reportsWithApiComparison.has(report.id)) {
+                continue;
+            }
+
+            for (const score of SCORE_ITEMS) {
+                comparison[score.key] = report[score.key] - previousReport[score.key];
+            }
+
+            comparisons.set(report.id, comparison);
+        }
+    }
+
+    return comparisons;
+}
+
+function getPreviousReportMap(reports: Report[]) {
+    const previousReports = new Map<string, Report>();
+    const reportsByGroup = new Map<string, Report[]>();
+
+    for (const report of reports) {
+        const key = report.groupId || 'ungrouped';
+        const groupReports = reportsByGroup.get(key) || [];
+
+        groupReports.push(report);
+        reportsByGroup.set(key, groupReports);
+    }
+
+    for (const groupReports of reportsByGroup.values()) {
+        const chronologicalReports = [...groupReports].sort((firstReport, secondReport) => {
+            const timestampDifference =
+                getReportTimestamp(firstReport) - getReportTimestamp(secondReport);
+
+            return timestampDifference === 0
+                ? firstReport.id.localeCompare(secondReport.id)
+                : timestampDifference;
+        });
+
+        for (let index = 1; index < chronologicalReports.length; index += 1) {
+            previousReports.set(chronologicalReports[index].id, chronologicalReports[index - 1]);
+        }
+    }
+
+    return previousReports;
+}
+
+function formatScoreDelta(delta: number) {
+    if (delta > 0) {
+        return `+${delta}`;
+    }
+
+    return String(delta);
+}
+
+function formatScoreDeltaLabel(label: string, delta: number) {
+    const absoluteDelta = Math.abs(delta);
+    const pointLabel = absoluteDelta === 1 ? 'point' : 'points';
+
+    if (delta > 0) {
+        return `${label} improved by ${absoluteDelta} ${pointLabel} from the previous report.`;
+    }
+
+    if (delta < 0) {
+        return `${label} declined by ${absoluteDelta} ${pointLabel} from the previous report.`;
+    }
+
+    return `${label} did not change from the previous report.`;
+}
+
+function getScoreDeltaClass(delta: number) {
+    if (delta > 0) {
+        return 'score-delta score-delta--improved';
+    }
+
+    if (delta < 0) {
+        return 'score-delta score-delta--declined';
+    }
+
+    return 'score-delta score-delta--unchanged';
+}
 
 function ProjectDetailPage() {
     const { id = '' } = useParams();
@@ -20,6 +216,8 @@ function ProjectDetailPage() {
 
     const [project, setProject] = useState<Project | null>(null);
     const [reports, setReports] = useState<PaginatedResponse<Report> | null>(null);
+    const [reportGroups, setReportGroups] = useState<ReportGroup[]>([]);
+    const [reportGroupTrends, setReportGroupTrends] = useState<ReportGroupTrend[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
@@ -33,6 +231,7 @@ function ProjectDetailPage() {
     const page = normalisePage(searchParams.get('page'));
     const limit = normaliseLimit(searchParams.get('limit'));
     const search = searchParams.get('search') || '';
+    const groupId = searchParams.get('groupId') || '';
     const sort = normaliseAllowedValue(searchParams.get('sort'), REPORT_SORT_OPTIONS, 'createdAt');
     const order = normaliseAllowedValue(searchParams.get('order'), ORDER_OPTIONS, 'desc');
 
@@ -61,18 +260,21 @@ function ProjectDetailPage() {
             setError('');
     
             try {
-                const [projectData, reportData] = await Promise.all([
+                const [projectData, groupData, reportData] = await Promise.all([
                     getProjectById(id),
+                    getProjectReportGroups(id).catch((): ReportGroup[] => []),
                     getProjectReports(id, {
                         page,
                         limit,
                         search,
                         sort,
-                        order
+                        order,
+                        groupId: groupId || undefined
                     })
                 ]);
     
                 setProject(projectData);
+                setReportGroups(groupData);
                 setReports(reportData);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load project');
@@ -84,7 +286,37 @@ function ProjectDetailPage() {
         if (id) {
             void loadProjectData();
         }
-    }, [id, page, limit, search, sort, order, reloadKey]);
+    }, [id, page, limit, search, sort, order, groupId, reloadKey]);
+
+    useEffect(() => {
+        let isCurrentRequest = true;
+
+        async function loadReportGroupTrends() {
+            setReportGroupTrends([]);
+
+            try {
+                const trendData = await getProjectReportGroupTrends(id, {
+                    groupId: groupId || undefined
+                });
+
+                if (isCurrentRequest) {
+                    setReportGroupTrends(trendData);
+                }
+            } catch {
+                if (isCurrentRequest) {
+                    setReportGroupTrends([]);
+                }
+            }
+        }
+
+        if (id) {
+            void loadReportGroupTrends();
+        }
+
+        return () => {
+            isCurrentRequest = false;
+        };
+    }, [id, groupId, reloadKey]);
 
     useEffect(() => {
         setSearchInput(search);
@@ -103,7 +335,7 @@ function ProjectDetailPage() {
 
     useEffect(() => {
         setSuccessMessage('');
-    }, [search, sort, order, page]);
+    }, [search, sort, order, groupId, page]);
 
     function setPage(nextPage: number) {
         const params = new URLSearchParams(searchParams);
@@ -127,6 +359,16 @@ function ProjectDetailPage() {
         setCreateReportDialogOpen(false);
     }
 
+    function handleReportGroupCreated(group: ReportGroup) {
+        setReportGroups((current) => {
+            if (current.some((item) => item.id === group.id)) {
+                return current;
+            }
+
+            return [...current, group];
+        });
+    }
+
     function handleReportUpdated(updatedReport: Report) {
         setReports((current) => {
             if (!current) {
@@ -143,6 +385,7 @@ function ProjectDetailPage() {
 
         setEditingReportId(null);
         setSuccessMessage(`Report updated: ${updatedReport.title}`);
+        setReloadKey((value) => value + 1);
     }
 
     function handleReportDeleted(reportId: string) {
@@ -166,6 +409,88 @@ function ProjectDetailPage() {
 
         setEditingReportId(null);
         setSuccessMessage('Report deleted successfully');
+        setReloadKey((value) => value + 1);
+    }
+
+    const reportComparisons = reports ? getReportComparisonMap(reports.data) : new Map();
+    const previousReports = reports ? getPreviousReportMap(reports.data) : new Map();
+    const reportTrends = getTrendMap(reportGroupTrends);
+
+    function renderReportCard(report: Report, headingLevel: 3 | 4) {
+        const comparison = reportComparisons.get(report.id);
+        const previousReport = previousReports.get(report.id);
+        const ReportHeading = headingLevel === 4 ? 'h4' : 'h3';
+
+        return (
+            <li key={report.id} className='item-card'>
+                {editingReportId === report.id ? (
+                    <>
+                        <ReportHeading>Edit report</ReportHeading>
+                        <EditReportForm
+                            report={report}
+                            groups={reportGroups}
+                            onUpdated={handleReportUpdated}
+                            onDeleted={handleReportDeleted}
+                            onCancel={() => setEditingReportId(null)}
+                        />
+                    </>
+                ) : (
+                    <>
+                        <div className='item-card__header'>
+                            <ReportHeading>{report.title}</ReportHeading>
+                            <button
+                                type='button'
+                                onClick={() => setEditingReportId(report.id)}
+                            >
+                                Edit
+                            </button>
+                        </div>
+
+                        <dl className='report-card__meta'>
+                            <div>
+                                <dt>Date</dt>
+                                <dd>{formatReportDate(report.createdAt)}</dd>
+                            </div>
+                        </dl>
+
+                        <p className='report-card__url'>{report.pageUrl}</p>
+
+                        <dl className='score-grid'>
+                            {SCORE_ITEMS.map((score) => {
+                                const delta = comparison?.[score.key];
+
+                                return (
+                                    <div key={score.key}>
+                                        <dt>{score.label}</dt>
+                                        <dd>
+                                            <span className='score-grid__value'>
+                                                {report[score.key]}
+                                            </span>
+                                            {delta === undefined ? null : (
+                                                <span
+                                                    className={getScoreDeltaClass(delta)}
+                                                    aria-label={formatScoreDeltaLabel(score.label, delta)}
+                                                >
+                                                    {formatScoreDelta(delta)}
+                                                </span>
+                                            )}
+                                        </dd>
+                                    </div>
+                                );
+                            })}
+                        </dl>
+
+                        {report.insights ? (
+                            <ReportInsightsSummary
+                                insights={report.insights}
+                                previousInsights={previousReport?.insights ?? null}
+                                userTimingComparisons={report.comparison?.userTimings}
+                            />
+                        ) : null}
+                    </>
+                )}
+            </li>
+        );
     }
 
     return (
@@ -210,8 +535,11 @@ function ProjectDetailPage() {
                             <CreateReportForm
                                 variant='embedded'
                                 projectId={project.id}
+                                groups={reportGroups}
+                                defaultReportGroupId={groupId}
                                 defaultPageSpeedUrl={project.url}
                                 onCreated={handleReportCreated}
+                                onGroupCreated={handleReportGroupCreated}
                             />
                         ) : null}
                     </ModalDialog>
@@ -252,6 +580,26 @@ function ProjectDetailPage() {
                             </label>
 
                             <label>
+                                <span>Group</span>
+                                <select
+                                    value={groupId}
+                                    onChange={(event) =>
+                                        updateQuery({
+                                            groupId: event.target.value,
+                                            page: '1'
+                                        })
+                                    }
+                                >
+                                    <option value=''>All groups</option>
+                                    {reportGroups.map((group) => (
+                                        <option key={group.id} value={group.id}>
+                                            {group.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
                                 <span>Sort</span>
                                 <select
                                     value={sort}
@@ -286,60 +634,23 @@ function ProjectDetailPage() {
 
                         {reports && reports.data.length > 0 ? (
                             <>
-                                <ul className='item-list'>
-                                    {reports.data.map((report) => (
-                                        <li key={report.id} className='item-card'>
-                                            {editingReportId === report.id ? (
-                                                <>
-                                                    <h3>Edit report</h3>
-                                                    <EditReportForm
-                                                        report={report}
-                                                        onUpdated={handleReportUpdated}
-                                                        onDeleted={handleReportDeleted}
-                                                        onCancel={() => setEditingReportId(null)}
-                                                    />
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div className='item-card__header'>
-                                                        <h3>{report.title}</h3>
-                                                        <button
-                                                            type='button'
-                                                            onClick={() => setEditingReportId(report.id)}
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                    </div>
+                                <div className='report-group-list'>
+                                    {getReportSections(reports.data, reportGroups, true).map((section) => {
+                                        const trend = reportTrends.get(section.key);
 
-                                                    <p>{report.summary}</p>
-
-                                                    <dl className='score-grid'>
-                                                        <div>
-                                                            <dt>Accessibility</dt>
-                                                            <dd>{report.accessibilityScore}</dd>
-                                                        </div>
-                                                        <div>
-                                                            <dt>Performance</dt>
-                                                            <dd>{report.performanceScore}</dd>
-                                                        </div>
-                                                        <div>
-                                                            <dt>SEO</dt>
-                                                            <dd>{report.seoScore}</dd>
-                                                        </div>
-                                                        <div>
-                                                            <dt>UX</dt>
-                                                            <dd>{report.uxScore}</dd>
-                                                        </div>
-                                                    </dl>
-
-                                                    {report.insights ? (
-                                                        <ReportInsightsSummary insights={report.insights} />
-                                                    ) : null}
-                                                </>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
+                                        return (
+                                            <section key={section.key} className='report-group-section'>
+                                                <h3>{section.name}</h3>
+                                                {trend ? <ReportGroupTrendChart trend={trend} /> : null}
+                                                <ul className='item-list'>
+                                                    {section.reports.map((report) =>
+                                                        renderReportCard(report, 4)
+                                                    )}
+                                                </ul>
+                                            </section>
+                                        );
+                                    })}
+                                </div>
 
                                 <div className='pagination'>
                                     <button

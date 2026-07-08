@@ -1,12 +1,24 @@
-# API Repo Prompt: PageSpeed Report Imports
+# API Repo Prompt: PageSpeed Report Imports, Indicators, And Groups
 
-Please implement the API side of the Site Score PageSpeed report import feature.
+Please implement the API side of the Site Score report score-model change, report grouping, and PageSpeed import feature.
 
 ## Context
 
-The frontend repo now has an optional, disabled-by-default PageSpeed import UI. It expects the API to provide a small import-preview endpoint, then accepts the returned normalised insights when creating or updating a report.
+The frontend now treats this as a breaking change. Existing data is seed-only, so do not preserve the old four-score contract.
 
-Enable the UI only after the API work is deployed by setting:
+The primary report indicators are now:
+
+- `performanceScore`
+- `accessibilityScore`
+- `seoScore`
+- `bestPracticesScore`
+- `agenticBrowsingScore`
+
+The old `uxScore` field should be removed from report create/update/list/detail responses.
+
+Reports now belong to first-class report groups. These are flat tracking streams such as `"Homepage mobile"` or `"Homepage desktop"`; do not build nested groups yet.
+
+The frontend still keeps the PageSpeed import UI behind:
 
 ```env
 VITE_ENABLE_PAGESPEED_IMPORT=true
@@ -18,22 +30,161 @@ Official references:
 
 - PageSpeed Insights API overview: https://developers.google.com/speed/docs/insights/v5/get-started
 - PageSpeed `runPagespeed` reference: https://developers.google.com/speed/docs/insights/v5/reference/pagespeedapi/runpagespeed
+- Lighthouse `total-byte-weight` audit: https://developer.chrome.com/docs/lighthouse/performance/total-byte-weight/
+- Lighthouse User Timing audit: https://developer.chrome.com/docs/lighthouse/performance/user-timings/
+- Lighthouse `user-timings` audit source: https://github.com/GoogleChrome/lighthouse/blob/main/core/audits/user-timings.js
 - Chrome UX Report API: https://developer.chrome.com/docs/crux/api/
 
-Important source note: PageSpeed can return Lighthouse lab data and, where available, field data. Google now recommends using the CrUX API or CrUX History API for real-world CrUX data over time, so keep this first slice PageSpeed-only but do not design the stored data shape in a way that blocks later CrUX ingestion.
+Important source note: as of the current PageSpeed API reference, the documented `category` query values are `accessibility`, `best-practices`, `performance`, and `seo`. The response exposes `lighthouseResult.categories` as a generic category map. The frontend contract includes `agenticBrowsing` now, but the import normaliser should return `null` for it unless PageSpeed/Lighthouse returns a documented or observed Agentic Browsing category in the response. Do not invent that score.
 
 ## Goal
 
 Ship Option A first:
 
-1. A manual, authenticated import endpoint that calls PageSpeed for one URL and one strategy.
-2. Normalised report insights returned to the frontend for review.
-3. Report create endpoints can persist those insights alongside the existing four manual scores.
-4. Existing report behaviour remains backwards compatible.
+1. Update report persistence and API validation to the new five-score report contract.
+2. Add a required `pageUrl` to reports so each report records the exact page tested.
+3. Add report groups so repeated reports can be tracked as a history stream.
+4. Add a manual, authenticated import endpoint that calls PageSpeed for one URL and one strategy.
+5. Return normalised report insights to the frontend for review before report creation.
+6. Persist optional imported insights on report creation.
 
 Do not build scheduled monitoring yet. Leave the contract ready for a later CrUX/CrUX History upgrade.
 
-## API Contract
+## Report Contract
+
+Report create should accept:
+
+```json
+{
+  "groupId": "report-group-id",
+  "title": "Homepage audit",
+  "summary": "Short summary",
+  "pageUrl": "https://example.com/",
+  "performanceScore": 94,
+  "accessibilityScore": 98,
+  "seoScore": 100,
+  "bestPracticesScore": 92,
+  "agenticBrowsingScore": 80,
+  "insights": {
+    "source": "PAGESPEED"
+  }
+}
+```
+
+Report update should accept the same editable report fields, but should not replace stored `insights` from the edit form:
+
+```json
+{
+  "groupId": "report-group-id",
+  "title": "Updated audit",
+  "summary": "Updated summary",
+  "pageUrl": "https://example.com/pricing",
+  "performanceScore": 91,
+  "accessibilityScore": 96,
+  "seoScore": 99,
+  "bestPracticesScore": 88,
+  "agenticBrowsingScore": 82
+}
+```
+
+Rules:
+
+- `groupId`: required, must belong to the same project and authenticated user.
+- `title`: required, trimmed, capped at 160 characters.
+- `summary`: required, trimmed, capped at 500 characters.
+- `pageUrl`: required, trimmed, absolute `http://` or `https://` URL, capped at 2048 characters.
+- All five scores: required whole numbers from 0 to 100.
+- `insights`: optional on create only.
+- If an update request includes `insights`, reject it with the API repo's standard validation error so accidental snapshot refreshes are visible.
+- Return `groupId`, a lightweight `group` summary, `pageUrl`, the five scores, `insights`, and `createdAt` from report list/detail/create/update responses.
+- `createdAt` is the v1 report date shown in the UI. Do not add `measuredAt` yet.
+
+Report response shape:
+
+```json
+{
+  "id": "report-id",
+  "projectId": "project-id",
+  "groupId": "report-group-id",
+  "group": {
+    "id": "report-group-id",
+    "name": "Homepage mobile",
+    "pageUrl": "https://example.com/",
+    "strategy": "mobile"
+  },
+  "title": "Homepage audit",
+  "summary": "Short summary",
+  "pageUrl": "https://example.com/",
+  "performanceScore": 94,
+  "accessibilityScore": 98,
+  "seoScore": 100,
+  "bestPracticesScore": 92,
+  "agenticBrowsingScore": 80,
+  "insights": null,
+  "createdAt": "2026-07-08T08:00:00.000Z"
+}
+```
+
+## Report Groups
+
+Add these endpoints:
+
+```txt
+GET /projects/:projectId/report-groups
+POST /projects/:projectId/report-groups
+```
+
+`GET /projects/:projectId/report-groups` should return all groups for that project ordered by name ascending:
+
+```json
+[
+  {
+    "id": "report-group-id",
+    "projectId": "project-id",
+    "name": "Homepage mobile",
+    "pageUrl": "https://example.com/",
+    "strategy": "mobile",
+    "createdAt": "2026-07-08T08:00:00.000Z"
+  }
+]
+```
+
+`POST /projects/:projectId/report-groups` request body:
+
+```json
+{
+  "name": "Homepage mobile",
+  "pageUrl": "https://example.com/",
+  "strategy": "mobile"
+}
+```
+
+Rules:
+
+- `name`: required, trimmed, capped at 120 characters.
+- `pageUrl`: required, trimmed, absolute `http://` or `https://` URL, capped at 2048 characters.
+- `strategy`: required, `"mobile"` or `"desktop"`.
+- The authenticated user must be allowed to access the project.
+- Group names should be unique per project if the API already has a uniqueness pattern; otherwise allow duplicates for this first slice and rely on the UI label.
+
+Report listing should accept an optional group filter:
+
+```txt
+GET /projects/:projectId/reports?groupId=report-group-id
+```
+
+When `groupId` is provided, return only reports in that group. Reject or ignore invalid inaccessible group ids consistently with the API repo's existing validation style; prefer rejecting with `400` or `404`.
+
+The UI also expects a full-history trend endpoint for report group graphs:
+
+```txt
+GET /projects/:projectId/report-group-trends
+GET /projects/:projectId/report-group-trends?groupId=report-group-id
+```
+
+This endpoint should return one trend object per accessible group, or one object when `groupId` is provided. Its points must be sorted oldest to newest by `createdAt` and must not be affected by report-list pagination, search, or sort order.
+
+## Import Endpoint
 
 Add this endpoint:
 
@@ -54,7 +205,7 @@ Request body:
 Rules:
 
 - `source` must currently be `"PAGESPEED"`.
-- `url` must be an absolute `http://` or `https://` URL, trimmed, and capped at 2048 characters.
+- `url` must use the same validation rules as report `pageUrl`.
 - `strategy` must be `"mobile"` or `"desktop"`.
 - The authenticated user must be allowed to access the project.
 - The endpoint should not create a report by itself. It returns data for the UI to review and later save.
@@ -73,9 +224,34 @@ Successful response:
     "performance": 94,
     "accessibility": 98,
     "bestPractices": 92,
-    "seo": 100
+    "seo": 100,
+    "agenticBrowsing": null
   },
   "metrics": {
+    "pageWeight": {
+      "value": 1732608,
+      "unit": "bytes",
+      "displayValue": "1,692 KiB",
+      "category": null
+    },
+    "firstContentfulPaint": {
+      "value": 1200,
+      "unit": "ms",
+      "displayValue": "1.2 s",
+      "category": null
+    },
+    "speedIndex": {
+      "value": 2400,
+      "unit": "ms",
+      "displayValue": "2.4 s",
+      "category": null
+    },
+    "totalBlockingTime": {
+      "value": 180,
+      "unit": "ms",
+      "displayValue": "180 ms",
+      "category": null
+    },
     "largestContentfulPaint": {
       "value": 1800,
       "unit": "ms",
@@ -98,6 +274,40 @@ Successful response:
       "score": 0.71,
       "overallSavingsMs": 520
     }
+  ],
+  "auditRefs": [
+    {
+      "id": "uses-optimized-images",
+      "title": "Serve images in next-gen formats",
+      "category": "performance",
+      "severity": "warning",
+      "displayValue": "Potential savings of 320 KiB",
+      "score": 0.5
+    },
+    {
+      "id": "is-crawlable",
+      "title": "Page is blocked from indexing",
+      "category": "seo",
+      "severity": "fail",
+      "displayValue": null,
+      "score": 0
+    }
+  ],
+  "userTimings": [
+    {
+      "name": "app:hydrate",
+      "entryType": "measure",
+      "startTime": 750,
+      "duration": 1000,
+      "displayValue": "1.0 s"
+    },
+    {
+      "name": "app:ready",
+      "entryType": "mark",
+      "startTime": 3600,
+      "duration": null,
+      "displayValue": "3.6 s"
+    }
   ]
 }
 ```
@@ -110,6 +320,7 @@ type PageSpeedStrategy = 'mobile' | 'desktop';
 type ReportInsightsSource = 'PAGESPEED' | 'CRUX';
 
 type ReportInsightMetricName =
+    | 'pageWeight'
     | 'firstContentfulPaint'
     | 'largestContentfulPaint'
     | 'cumulativeLayoutShift'
@@ -120,7 +331,7 @@ type ReportInsightMetricName =
 
 type ReportInsightMetric = {
     value: number | null;
-    unit: 'ms' | 'score' | 'unitless';
+    unit: 'ms' | 'score' | 'unitless' | 'bytes';
     displayValue: string | null;
     category?: string | null;
 };
@@ -131,6 +342,27 @@ type ReportInsightOpportunity = {
     displayValue: string | null;
     score: number | null;
     overallSavingsMs: number | null;
+};
+
+type ReportInsightAuditSeverity = 'fail' | 'warning';
+
+type ReportInsightAuditRef = {
+    id: string;
+    title: string;
+    category: string;
+    severity: ReportInsightAuditSeverity;
+    displayValue: string | null;
+    score: number | null;
+};
+
+type ReportInsightUserTimingEntryType = 'mark' | 'measure';
+
+type ReportInsightUserTiming = {
+    name: string;
+    entryType: ReportInsightUserTimingEntryType;
+    startTime: number | null;
+    duration: number | null;
+    displayValue: string | null;
 };
 
 type ReportInsights = {
@@ -145,6 +377,7 @@ type ReportInsights = {
         accessibility: number | null;
         bestPractices: number | null;
         seo: number | null;
+        agenticBrowsing: number | null;
     };
     metrics: Partial<Record<ReportInsightMetricName, ReportInsightMetric>>;
     fieldData?: {
@@ -153,6 +386,56 @@ type ReportInsights = {
         metrics: Partial<Record<ReportInsightMetricName, ReportInsightMetric>>;
     } | null;
     opportunities: ReportInsightOpportunity[];
+    auditRefs?: ReportInsightAuditRef[];
+    userTimings?: ReportInsightUserTiming[];
+};
+
+type ReportGroup = {
+    id: string;
+    projectId: string;
+    name: string;
+    pageUrl: string;
+    strategy: PageSpeedStrategy;
+    createdAt: string;
+};
+
+type ReportGroupSummary = Pick<ReportGroup, 'id' | 'name' | 'pageUrl' | 'strategy'>;
+
+type Report = {
+    id: string;
+    projectId: string;
+    groupId: string | null;
+    group?: ReportGroupSummary | null;
+    title: string;
+    summary: string;
+    pageUrl: string;
+    performanceScore: number;
+    accessibilityScore: number;
+    seoScore: number;
+    bestPracticesScore: number;
+    agenticBrowsingScore: number;
+    insights?: ReportInsights | null;
+    createdAt: string;
+};
+
+type ReportTrendPoint = {
+    id: string;
+    title: string;
+    pageUrl: string;
+    createdAt: string;
+    performanceScore: number;
+    accessibilityScore: number;
+    seoScore: number;
+    bestPracticesScore: number;
+    agenticBrowsingScore: number;
+};
+
+type ReportGroupTrend = {
+    groupId: string;
+    groupName: string;
+    pageUrl: string;
+    strategy: PageSpeedStrategy;
+    points: ReportTrendPoint[];
 };
 ```
 
@@ -168,7 +451,7 @@ Use query parameters:
 
 - `url`: the validated URL.
 - `strategy`: `mobile` or `desktop`.
-- `category`: request `performance`, `accessibility`, `best-practices`, and `seo`.
+- `category`: request the documented categories `performance`, `accessibility`, `best-practices`, and `seo`.
 - `key`: from server environment when configured.
 
 Use a server-side timeout and return a controlled API error when PageSpeed is slow or unavailable.
@@ -181,11 +464,16 @@ Scores:
 
 - Read from `lighthouseResult.categories`.
 - Convert Lighthouse category scores from `0..1` to whole numbers `0..100`.
+- Map `performance` to `scores.performance`.
+- Map `accessibility` to `scores.accessibility`.
+- Map `seo` to `scores.seo`.
+- Map `best-practices` to `scores.bestPractices`.
+- Map Agentic Browsing to `scores.agenticBrowsing` only if the PageSpeed/Lighthouse response includes a reliable category for it. Otherwise return `null`.
 - Use `null` when a category is missing or not numeric.
-- Do not map best practices into the existing `uxScore`. The frontend keeps UX as a manual score for now.
 
 Metrics:
 
+- `total-byte-weight` -> `pageWeight`
 - `first-contentful-paint` -> `firstContentfulPaint`
 - `largest-contentful-paint` -> `largestContentfulPaint`
 - `cumulative-layout-shift` -> `cumulativeLayoutShift`
@@ -198,8 +486,15 @@ For each metric:
 
 - `value`: use `numericValue` when it is a finite number, otherwise `null`.
 - `displayValue`: use the audit display value when present, otherwise `null`.
-- `unit`: use `ms` for timing metrics, `unitless` for CLS, and `score` only for score-like future metrics.
+- `unit`: use `bytes` for `pageWeight`, `ms` for timing metrics, `unitless` for CLS, and `score` only for score-like future metrics.
 - `category`: optional, currently `null` unless there is a reliable source value.
+
+Page weight:
+
+- Use the Lighthouse `total-byte-weight` audit.
+- Store `numericValue` as raw bytes when it is finite.
+- Store the audit `displayValue` when provided, but the frontend can format raw bytes if needed.
+- Do not implement a separate crawler for this v1. PageSpeed already returns the Lighthouse audit payload needed for this value.
 
 Opportunities:
 
@@ -208,6 +503,31 @@ Opportunities:
 - Sort by `overallSavingsMs` descending.
 - Return the top 5.
 - Keep `title` and `displayValue` plain strings. Do not return HTML.
+
+Warnings and failed audits:
+
+- Build `auditRefs` from `lighthouseResult.categories.*.auditRefs` plus the matching entries in `lighthouseResult.audits`.
+- Include audits from any requested category when they fail or need attention.
+- Suggested v1 severity mapping:
+  - `fail`: numeric `score` is `0`.
+  - `warning`: numeric `score` is greater than `0` and less than `1`.
+- Ignore audits with `scoreDisplayMode` values such as `manual`, `informative`, `not_applicable`, or `error` unless the API has a clear product reason to surface them later.
+- `category` should be the Lighthouse category id, for example `performance`, `accessibility`, `best-practices`, `seo`, or a documented Agentic Browsing category if one appears.
+- Keep the returned fields bounded to `id`, `title`, `category`, `severity`, `displayValue`, and `score`. Do not return raw audit descriptions, HTML, warnings arrays, stack traces, or full details payloads.
+- Sort by category order and then failed audits before warnings; cap the list to a sensible limit such as 20.
+
+User timings:
+
+- Pull from the Lighthouse `user-timings` audit.
+- Use `lighthouseResult.audits["user-timings"].details.items` when it is a table-like details payload.
+- Normalise `timingType: "Measure"` to `entryType: "measure"` and `timingType: "Mark"` to `entryType: "mark"`.
+- `startTime`: finite `startTime` in milliseconds, otherwise `null`.
+- `duration`: finite `duration` in milliseconds for measures, otherwise `null`.
+- `displayValue`: short formatted primary value. Use duration for measures and start time for marks.
+- Treat lower numbers as better for comparisons. Measures becoming shorter are improvements; marks happening earlier are improvements.
+- Exclude noisy entries such as names beginning with `goog_`.
+- Keep names plain text and cap output to a sensible number such as 50.
+- If the audit is missing or not applicable, return `userTimings: []` or omit the field consistently.
 
 URLs and metadata:
 
@@ -222,35 +542,38 @@ Field data:
 - If you include PageSpeed field data from `loadingExperience` or `originLoadingExperience`, normalise it into the same metric shape and mark `fieldData.source` as `"PAGESPEED"`.
 - Do not rely on PageSpeed field data as the long-term time-series source. Leave future CrUX work to a separate slice.
 
-## Report Persistence
+## Persistence Notes
 
-Extend report create validation to accept optional `insights`.
-
-Existing report fields must continue to work:
-
-```json
-{
-  "title": "Homepage audit",
-  "summary": "Short summary",
-  "accessibilityScore": 98,
-  "performanceScore": 94,
-  "seoScore": 100,
-  "uxScore": 80,
-  "insights": {
-    "source": "PAGESPEED"
-  }
-}
-```
-
-Implementation notes:
-
+- Add a required `pageUrl` column/string field to reports.
+- Add report groups with `projectId`, `name`, `pageUrl`, `strategy`, and `createdAt`.
+- Add `groupId` to reports and enforce that it belongs to the report's project.
+- Replace `uxScore` with required `bestPracticesScore` and `agenticBrowsingScore`.
 - Add a nullable JSON/JSONB column for `insights` if the API uses a relational database.
 - Validate the `insights` shape at the API boundary rather than storing arbitrary JSON.
-- Keep all new report fields additive and optional.
-- Return `insights` from report list/detail/create/update responses.
-- Report update should preserve existing `insights` and should not replace them from the edit form.
-- If an update request includes `insights`, reject it or ignore that field consistently. Prefer rejecting it with the API repo's standard validation error so accidental snapshot refreshes are visible.
 - Do not persist the full raw PageSpeed response. Store only the normalised fields above.
+- Seed data can be reset or migrated destructively for this change.
+
+## Seed Data Reset
+
+Remove the old seed report data and rebuild the development seed from the new report contract. The current seed data can be treated as disposable because it was only used for the first four-score prototype.
+
+Recommended baseline:
+
+- One seeded test user/account, following the repo's existing auth seed pattern.
+- Two realistic projects, such as `Crayons & Code` and `Example Commerce`.
+- Four flat report groups per project:
+  - `Homepage mobile`
+  - `Homepage desktop`
+  - `Pricing mobile`
+  - `Pricing desktop`
+- At least three reports per group, with `createdAt` values spaced over time so the frontend trend graph is meaningful.
+- Every seeded report should include `groupId`, `pageUrl`, the five score fields, and `createdAt`.
+- Include at least one report with valid normalised `insights`.
+- Trend endpoint responses should include chronological points for every seeded group.
+- Do not seed `uxScore`.
+- Do not seed ungrouped reports in the normal development baseline. Keep ungrouped handling as a defensive fallback only.
+
+The seed data should make it easy to verify grouped history streams, trend graphs, group filtering, date display, URL display, five-score cards, and the imported insights block locally.
 
 ## Errors
 
@@ -278,16 +601,35 @@ Error messages should be safe for users and should not expose API keys, stack tr
 
 ## Tests To Add
 
+- Report create requires `pageUrl` and the five score fields.
+- Report create requires a valid `groupId`.
+- Report create rejects missing, non-integer, or out-of-range scores.
+- Report create accepts optional valid `insights`.
+- Report create rejects malformed `insights`.
+- Report update accepts `groupId`, `pageUrl`, and the five score fields.
+- Report update preserves existing `insights` and rejects or ignores `insights` consistently.
+- Report responses no longer include `uxScore`.
+- Report responses include `createdAt`, `groupId`, and lightweight `group`.
+- Report group create validates name, page URL, strategy, auth, and project ownership.
+- Report group list returns only groups for the requested project.
+- Report list filters by `groupId`.
+- Report group trend endpoint returns full-history chronological points for each accessible group.
+- Report group trend endpoint supports optional `groupId` filtering.
+- Report group trend endpoint is not affected by report list pagination, search, or sort order.
 - Request validation rejects missing source, unsupported source, invalid URL, unsupported strategy, and overlong URL.
 - Auth/ownership checks match existing project report endpoints.
 - PageSpeed client builds the expected query parameters without exposing the key in errors.
 - Normaliser converts category scores from `0..1` to `0..100`.
-- Normaliser returns `null` for missing or malformed metrics.
+- Normaliser returns `null` for missing or malformed category scores and metrics.
+- Normaliser returns `agenticBrowsing: null` when no reliable Agentic Browsing category is present.
+- Normaliser maps the `total-byte-weight` Lighthouse audit to `metrics.pageWeight` with `unit: "bytes"`.
+- Normaliser includes FCP, Speed Index, and TBT when the corresponding Lighthouse audits exist.
 - Opportunity normalisation sorts and limits returned opportunities.
-- Report create accepts optional valid `insights`.
-- Report create rejects malformed `insights`.
-- Report update preserves existing `insights` and does not replace the stored snapshot.
-- Existing report create/update payloads without `insights` still pass.
+- Audit-ref normalisation includes failed and warning audits from all requested categories.
+- Audit-ref normalisation does not expose raw audit details, descriptions, warnings arrays, or HTML.
+- User timing normalisation maps the Lighthouse `user-timings` audit to `insights.userTimings`.
+- User timing normalisation handles marks without duration and measures with duration.
+- User timing normalisation filters noisy entries, caps output, and rejects malformed saved user timing entries.
 
 ## Future CrUX Slice
 

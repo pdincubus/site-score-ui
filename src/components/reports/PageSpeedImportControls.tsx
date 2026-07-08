@@ -1,74 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { importReportInsights } from '../../api/projects';
 import type { PageSpeedStrategy, ReportInsights } from '../../types/api';
 import { Alert } from '../feedback/Alert';
-import { ReportInsightsSummary } from './ReportInsightsSummary';
-
-const PAGE_SPEED_URL_MAX_LENGTH = 2048;
+import { validateReportPageUrl } from './reportFormValidation';
 
 type ImportedScores = {
-    accessibilityScore?: string;
     performanceScore?: string;
+    accessibilityScore?: string;
     seoScore?: string;
+    bestPracticesScore?: string;
+    agenticBrowsingScore?: string;
 };
 
 type PageSpeedImportControlsProps = {
     projectId: string;
-    defaultUrl: string;
-    insights: ReportInsights | null;
+    pageUrl: string;
+    strategy: PageSpeedStrategy;
+    onStrategyChange: (strategy: PageSpeedStrategy) => void;
     onImported: (insights: ReportInsights) => void;
     onScoresImported: (scores: ImportedScores) => void;
     disabled?: boolean;
 };
-
-type UrlValidationResult =
-    | {
-          url: string;
-          error: '';
-      }
-    | {
-          url: null;
-          error: string;
-      };
-
-function validatePageSpeedUrl(value: string): UrlValidationResult {
-    const url = value.trim();
-
-    if (!url) {
-        return {
-            url: null,
-            error: 'Enter a page URL before importing PageSpeed data.'
-        };
-    }
-
-    if (url.length > PAGE_SPEED_URL_MAX_LENGTH) {
-        return {
-            url: null,
-            error: `Page URL must be ${PAGE_SPEED_URL_MAX_LENGTH} characters or fewer.`
-        };
-    }
-
-    try {
-        const parsedUrl = new URL(url);
-
-        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-            return {
-                url: null,
-                error: 'Page URL must start with http:// or https://.'
-            };
-        }
-    } catch {
-        return {
-            url: null,
-            error: 'Enter a valid page URL.'
-        };
-    }
-
-    return {
-        url,
-        error: ''
-    };
-}
 
 function normaliseImportedScore(score: number | null) {
     if (
@@ -86,34 +38,30 @@ function normaliseImportedScore(score: number | null) {
 
 function getImportedScores(insights: ReportInsights): ImportedScores {
     return {
-        accessibilityScore: normaliseImportedScore(insights.scores.accessibility),
         performanceScore: normaliseImportedScore(insights.scores.performance),
-        seoScore: normaliseImportedScore(insights.scores.seo)
+        accessibilityScore: normaliseImportedScore(insights.scores.accessibility),
+        seoScore: normaliseImportedScore(insights.scores.seo),
+        bestPracticesScore: normaliseImportedScore(insights.scores.bestPractices),
+        agenticBrowsingScore: normaliseImportedScore(insights.scores.agenticBrowsing)
     };
 }
 
 function PageSpeedImportControls({
     projectId,
-    defaultUrl,
-    insights,
+    pageUrl,
+    strategy,
+    onStrategyChange,
     onImported,
     onScoresImported,
     disabled = false
 }: PageSpeedImportControlsProps) {
-    const [pageUrl, setPageUrl] = useState(insights?.testedUrl || defaultUrl);
-    const [strategy, setStrategy] = useState<PageSpeedStrategy>(insights?.strategy || 'mobile');
     const [error, setError] = useState('');
     const [isImporting, setIsImporting] = useState(false);
-
-    useEffect(() => {
-        setPageUrl(insights?.testedUrl || defaultUrl);
-        setStrategy(insights?.strategy || 'mobile');
-    }, [defaultUrl, insights?.strategy, insights?.testedUrl]);
 
     async function handleImport() {
         setError('');
 
-        const validation = validatePageSpeedUrl(pageUrl);
+        const validation = validateReportPageUrl(pageUrl);
 
         if (!validation.url) {
             setError(validation.error);
@@ -143,23 +91,20 @@ function PageSpeedImportControls({
             <legend>PageSpeed import</legend>
 
             <div className='page-speed-import__controls'>
-                <label>
-                    <span>Page URL</span>
-                    <input
-                        type='url'
-                        value={pageUrl}
-                        onChange={(event) => setPageUrl(event.target.value)}
-                        placeholder='https://example.com/'
-                        maxLength={PAGE_SPEED_URL_MAX_LENGTH}
-                        disabled={disabled || isImporting}
-                    />
-                </label>
+                <dl className='page-speed-import__target'>
+                    <div>
+                        <dt>Page URL</dt>
+                        <dd>{pageUrl.trim() || 'Not set'}</dd>
+                    </div>
+                </dl>
 
                 <label>
                     <span>Strategy</span>
                     <select
                         value={strategy}
-                        onChange={(event) => setStrategy(event.target.value as PageSpeedStrategy)}
+                        onChange={(event) =>
+                            onStrategyChange(event.target.value as PageSpeedStrategy)
+                        }
                         disabled={disabled || isImporting}
                     >
                         <option value='mobile'>Mobile</option>
@@ -178,7 +123,6 @@ function PageSpeedImportControls({
                 </Alert>
             ) : null}
 
-            {insights ? <ReportInsightsSummary insights={insights} /> : null}
         </fieldset>
     );
 }
