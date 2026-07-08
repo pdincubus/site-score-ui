@@ -336,6 +336,108 @@ describe('CreateReportForm', () => {
         });
     });
 
+    it('normalises imported insight fields before creating a report', async () => {
+        const onCreated = vi.fn();
+        const importedInsightsWithMissingNullableStrings = {
+            ...importedInsights,
+            finalUrl: undefined,
+            lighthouseVersion: undefined,
+            scores: {
+                ...importedInsights.scores,
+                agenticBrowsing: undefined
+            },
+            metrics: {
+                largestContentfulPaint: {
+                    value: 1800,
+                    unit: 'ms',
+                    displayValue: undefined
+                }
+            },
+            fieldData: {
+                overallCategory: undefined,
+                metrics: {}
+            },
+            opportunities: [
+                {
+                    id: 'unused-javascript',
+                    title: 'Reduce unused JavaScript',
+                    displayValue: undefined,
+                    score: 0.5,
+                    overallSavingsMs: 300
+                }
+            ]
+        } as unknown as ReportInsights;
+
+        vi.stubEnv('VITE_ENABLE_PAGESPEED_IMPORT', 'true');
+        vi.mocked(importReportInsights).mockResolvedValue(
+            importedInsightsWithMissingNullableStrings
+        );
+        vi.mocked(createReport).mockResolvedValue({
+            id: 'report-1',
+            projectId: 'project-1',
+            groupId: 'group-mobile',
+            title: 'Homepage audit',
+            summary: 'Imported summary',
+            pageUrl: 'https://example.com/',
+            performanceScore: 94,
+            accessibilityScore: 98,
+            seoScore: 100,
+            bestPracticesScore: 92,
+            agenticBrowsingScore: 80,
+            insights: importedInsights,
+            createdAt: '2026-01-01T00:00:00.000Z'
+        });
+
+        render(
+            <CreateReportForm
+                projectId='project-1'
+                groups={[homepageMobileGroup]}
+                defaultPageSpeedUrl='https://example.com/'
+                onCreated={onCreated}
+            />
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Import PageSpeed data' }));
+
+        await waitFor(() => {
+            expect(importReportInsights).toHaveBeenCalled();
+        });
+
+        fireEvent.change(screen.getByLabelText('Title'), {
+            target: { value: 'Homepage audit' }
+        });
+        fireEvent.change(screen.getByLabelText('Summary'), {
+            target: { value: 'Imported summary' }
+        });
+        fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
+
+        await waitFor(() => {
+            expect(createReport).toHaveBeenCalledWith(
+                'project-1',
+                expect.objectContaining({
+                    insights: expect.objectContaining({
+                        finalUrl: null,
+                        lighthouseVersion: null,
+                        scores: expect.objectContaining({
+                            agenticBrowsing: null
+                        }),
+                        metrics: expect.objectContaining({
+                            largestContentfulPaint: expect.objectContaining({
+                                displayValue: null
+                            })
+                        }),
+                        fieldData: null,
+                        opportunities: [
+                            expect.objectContaining({
+                                displayValue: null
+                            })
+                        ]
+                    })
+                })
+            );
+        });
+    });
+
     it('uses the selected group URL and strategy as PageSpeed import defaults', async () => {
         vi.stubEnv('VITE_ENABLE_PAGESPEED_IMPORT', 'true');
         vi.mocked(importReportInsights).mockResolvedValue({

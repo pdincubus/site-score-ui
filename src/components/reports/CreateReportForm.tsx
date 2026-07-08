@@ -5,6 +5,7 @@ import type { PageSpeedStrategy, Report, ReportGroup, ReportInsights } from '../
 import { Alert } from '../feedback/Alert';
 import { PageSpeedImportControls } from './PageSpeedImportControls';
 import { ReportInsightsSummary } from './ReportInsightsSummary';
+import { normaliseReportInsights } from './reportInsightsNormalisation';
 import {
     REPORT_GROUP_NAME_MAX_LENGTH,
     REPORT_PAGE_URL_MAX_LENGTH,
@@ -94,6 +95,9 @@ function CreateReportForm({
             return;
         }
 
+        const normalisedInsights = insights
+            ? normaliseReportInsights(insights, pageUrl, pageSpeedStrategy)
+            : null;
         const validation = validateReportForm({
             groupId: isCreatingGroup ? undefined : nextGroupId,
             title,
@@ -104,7 +108,7 @@ function CreateReportForm({
             seoScore,
             bestPracticesScore,
             agenticBrowsingScore,
-            insights
+            insights: normalisedInsights
         });
 
         if (!validation.data) {
@@ -226,8 +230,14 @@ function CreateReportForm({
     }
 
     function handleInsightsImported(importedInsights: ReportInsights) {
-        setInsights(importedInsights);
-        setPageUrl(importedInsights.testedUrl);
+        const normalisedInsights = normaliseReportInsights(
+            importedInsights,
+            pageUrl,
+            pageSpeedStrategy
+        );
+
+        setInsights(normalisedInsights);
+        setPageUrl(normalisedInsights.testedUrl);
     }
 
     function handlePageUrlChange(event: React.ChangeEvent<HTMLInputElement>) {
