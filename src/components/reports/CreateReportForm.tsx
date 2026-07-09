@@ -9,7 +9,6 @@ import { normaliseReportInsights } from './reportInsightsNormalisation';
 import {
     REPORT_GROUP_NAME_MAX_LENGTH,
     REPORT_PAGE_URL_MAX_LENGTH,
-    REPORT_SUMMARY_MAX_LENGTH,
     REPORT_TITLE_MAX_LENGTH,
     SCORE_MAX,
     SCORE_MIN,
@@ -56,7 +55,6 @@ function CreateReportForm({
         initialGroup?.strategy || 'mobile'
     );
     const [title, setTitle] = useState('');
-    const [summary, setSummary] = useState('');
     const [pageUrl, setPageUrl] = useState(initialGroup?.pageUrl || defaultPageSpeedUrl);
     const [pageSpeedStrategy, setPageSpeedStrategy] = useState<PageSpeedStrategy>(
         initialGroup?.strategy || 'mobile'
@@ -101,7 +99,7 @@ function CreateReportForm({
         const validation = validateReportForm({
             groupId: isCreatingGroup ? undefined : nextGroupId,
             title,
-            summary,
+            summary: title,
             pageUrl,
             performanceScore,
             accessibilityScore,
@@ -138,7 +136,6 @@ function CreateReportForm({
             });
 
             setTitle('');
-            setSummary('');
             setIsCreatingGroup(!nextGroup && groups.length === 0);
             setSelectedGroupId(nextGroup?.id || selectedGroupId);
             setGroupName('');
@@ -334,18 +331,6 @@ function CreateReportForm({
                     placeholder='Homepage audit'
                     required
                     maxLength={REPORT_TITLE_MAX_LENGTH}
-                />
-            </label>
-
-            <label>
-                <span>Summary</span>
-                <input
-                    type='text'
-                    value={summary}
-                    onChange={(event) => setSummary(event.target.value)}
-                    placeholder='Short summary'
-                    required
-                    maxLength={REPORT_SUMMARY_MAX_LENGTH}
                 />
             </label>
 

@@ -189,14 +189,9 @@ function normaliseMetric(value: unknown): ReportInsightMetric | undefined {
     const metric: ReportInsightMetric = {
         value: normaliseFiniteNumber(value.value),
         unit: value.unit as ReportInsightMetric['unit'],
-        displayValue: normaliseNullableText(value.displayValue, 500)
+        displayValue: normaliseNullableText(value.displayValue, 500),
+        category: normaliseNullableText(value.category, 100)
     };
-
-    const category = normaliseNullableText(value.category, 100);
-
-    if (category !== null) {
-        metric.category = category;
-    }
 
     return metric;
 }

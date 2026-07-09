@@ -46,7 +46,8 @@ const importedInsights: ReportInsights = {
         largestContentfulPaint: {
             value: 1800,
             unit: 'ms',
-            displayValue: '1.8 s'
+            displayValue: '1.8 s',
+            category: null
         }
     },
     opportunities: []
@@ -74,8 +75,7 @@ describe('CreateReportForm', () => {
         expect(screen.getByLabelText('Group')).toBeRequired();
         expect(screen.getByLabelText('Title')).toBeRequired();
         expect(screen.getByLabelText('Title')).toHaveAttribute('maxlength', '160');
-        expect(screen.getByLabelText('Summary')).toBeRequired();
-        expect(screen.getByLabelText('Summary')).toHaveAttribute('maxlength', '500');
+        expect(screen.queryByLabelText('Summary')).not.toBeInTheDocument();
         expect(screen.getByLabelText('Page URL')).toBeRequired();
         expect(screen.getByLabelText('Page URL')).toHaveAttribute('maxlength', '2048');
         expect(screen.getByLabelText('Performance')).toBeRequired();
@@ -96,7 +96,7 @@ describe('CreateReportForm', () => {
                 strategy: 'mobile'
             },
             title: 'Homepage audit',
-            summary: 'A short summary',
+            summary: 'Homepage audit',
             pageUrl: 'https://example.com/pricing',
             performanceScore: 88,
             accessibilityScore: 92,
@@ -117,9 +117,6 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: '  Homepage audit  ' }
         });
-        fireEvent.change(screen.getByLabelText('Summary'), {
-            target: { value: '  A short summary  ' }
-        });
         fireEvent.change(screen.getByLabelText('Page URL'), {
             target: { value: '  https://example.com/pricing  ' }
         });
@@ -134,7 +131,7 @@ describe('CreateReportForm', () => {
             expect(createReport).toHaveBeenCalledWith('project-1', {
                 groupId: 'group-mobile',
                 title: 'Homepage audit',
-                summary: 'A short summary',
+                summary: 'Homepage audit',
                 pageUrl: 'https://example.com/pricing',
                 performanceScore: 88,
                 accessibilityScore: 92,
@@ -158,9 +155,6 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: 'Homepage audit' }
         });
-        fireEvent.change(screen.getByLabelText('Summary'), {
-            target: { value: 'Summary' }
-        });
         fireEvent.change(screen.getByLabelText('Page URL'), {
             target: { value: 'https://example.com/' }
         });
@@ -176,9 +170,6 @@ describe('CreateReportForm', () => {
 
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: 'Homepage audit' }
-        });
-        fireEvent.change(screen.getByLabelText('Summary'), {
-            target: { value: 'Summary' }
         });
         fireEvent.change(screen.getByLabelText('Page URL'), {
             target: { value: 'https://example.com/' }
@@ -206,7 +197,7 @@ describe('CreateReportForm', () => {
                 strategy: 'mobile'
             },
             title: 'Homepage audit',
-            summary: 'Summary',
+            summary: 'Homepage audit',
             pageUrl: 'https://example.com/',
             performanceScore: 80,
             accessibilityScore: 80,
@@ -233,9 +224,6 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: 'Homepage audit' }
         });
-        fireEvent.change(screen.getByLabelText('Summary'), {
-            target: { value: 'Summary' }
-        });
         fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
 
         await waitFor(() => {
@@ -247,7 +235,7 @@ describe('CreateReportForm', () => {
             expect(createReport).toHaveBeenCalledWith('project-1', {
                 groupId: 'group-mobile',
                 title: 'Homepage audit',
-                summary: 'Summary',
+                summary: 'Homepage audit',
                 pageUrl: 'https://example.com/',
                 performanceScore: 80,
                 accessibilityScore: 80,
@@ -277,9 +265,6 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: 'Homepage audit' }
         });
-        fireEvent.change(screen.getByLabelText('Summary'), {
-            target: { value: 'Summary' }
-        });
         fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
 
         expect(
@@ -305,7 +290,7 @@ describe('CreateReportForm', () => {
                 strategy: 'mobile'
             },
             title: 'Homepage audit',
-            summary: 'Imported summary',
+            summary: 'Homepage audit',
             pageUrl: 'https://example.com/',
             performanceScore: 94,
             accessibilityScore: 98,
@@ -345,16 +330,13 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: 'Homepage audit' }
         });
-        fireEvent.change(screen.getByLabelText('Summary'), {
-            target: { value: 'Imported summary' }
-        });
         fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
 
         await waitFor(() => {
             expect(createReport).toHaveBeenCalledWith('project-1', {
                 groupId: 'group-mobile',
                 title: 'Homepage audit',
-                summary: 'Imported summary',
+                summary: 'Homepage audit',
                 pageUrl: 'https://example.com/',
                 performanceScore: 94,
                 accessibilityScore: 98,
@@ -427,7 +409,7 @@ describe('CreateReportForm', () => {
             projectId: 'project-1',
             groupId: 'group-mobile',
             title: 'Homepage audit',
-            summary: 'Imported summary',
+            summary: 'Homepage audit',
             pageUrl: 'https://example.com/',
             performanceScore: 94,
             accessibilityScore: 98,
@@ -456,9 +438,6 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: 'Homepage audit' }
         });
-        fireEvent.change(screen.getByLabelText('Summary'), {
-            target: { value: 'Imported summary' }
-        });
         fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
 
         await waitFor(() => {
@@ -473,7 +452,8 @@ describe('CreateReportForm', () => {
                         }),
                         metrics: expect.objectContaining({
                             largestContentfulPaint: expect.objectContaining({
-                                displayValue: null
+                                displayValue: null,
+                                category: null
                             })
                         }),
                         fieldData: null,
