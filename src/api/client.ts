@@ -1,5 +1,8 @@
+import { mockApiFetch } from './mockApi';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const NORMALIZED_API_BASE_URL = API_BASE_URL?.replace(/\/+$/, '');
+const MOCK_API_PATH = '/mock-api';
 
 let onUnauthorizedHandler: (() => void) | null = null;
 
@@ -7,9 +10,20 @@ type ApiFetchOptions = RequestInit & {
     bodyJson?: unknown;
 };
 
+function isMockApiEnabled() {
+    return (
+        NORMALIZED_API_BASE_URL === MOCK_API_PATH ||
+        NORMALIZED_API_BASE_URL?.endsWith(MOCK_API_PATH)
+    );
+}
+
 async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
     if (!NORMALIZED_API_BASE_URL) {
         throw new Error('Missing VITE_API_BASE_URL environment variable');
+    }
+
+    if (isMockApiEnabled()) {
+        return mockApiFetch<T>(path, options);
     }
 
     const headers = new Headers(options.headers);

@@ -35,7 +35,10 @@ describe('ProtectedRoute', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByText('Loading...')).toBeInTheDocument();
+        expect(screen.getByText('Checking your session')).toBeInTheDocument();
+        expect(
+            screen.getByText('If the API has been idle, this can take a few seconds while it wakes up.')
+        ).toBeInTheDocument();
         expect(screen.queryByText('Login page')).not.toBeInTheDocument();
     });
 

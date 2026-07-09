@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deleteReport, updateReport } from '../../api/projects';
 import { EditReportForm } from './EditReportForm';
-import type { Report, ReportInsights } from '../../types/api';
+import type { Report, ReportGroup, ReportInsights } from '../../types/api';
 
 vi.mock('../../api/projects', () => ({
     deleteReport: vi.fn(),
@@ -20,21 +20,49 @@ const importedInsights: ReportInsights = {
         performance: 96,
         accessibility: 99,
         bestPractices: 91,
-        seo: 97
+        seo: 97,
+        agenticBrowsing: 88
     },
     metrics: {},
     opportunities: []
 };
 
+const homepageMobileGroup: ReportGroup = {
+    id: 'group-mobile',
+    projectId: 'project-1',
+    name: 'Homepage mobile',
+    pageUrl: 'https://example.com/original',
+    strategy: 'mobile',
+    createdAt: '2026-01-01T00:00:00.000Z'
+};
+
+const homepageDesktopGroup: ReportGroup = {
+    id: 'group-desktop',
+    projectId: 'project-1',
+    name: 'Homepage desktop',
+    pageUrl: 'https://example.com/desktop',
+    strategy: 'desktop',
+    createdAt: '2026-01-01T00:00:00.000Z'
+};
+
 const report: Report = {
     id: 'report-1',
     projectId: 'project-1',
+    groupId: 'group-mobile',
+    group: {
+        id: 'group-mobile',
+        name: 'Homepage mobile',
+        pageUrl: 'https://example.com/original',
+        strategy: 'mobile'
+    },
     title: 'Original report',
     summary: 'Original summary',
-    accessibilityScore: 80,
+    pageUrl: 'https://example.com/original',
     performanceScore: 81,
+    accessibilityScore: 80,
     seoScore: 82,
-    uxScore: 83,
+    bestPracticesScore: 83,
+    agenticBrowsingScore: 84,
     createdAt: '2026-01-01T00:00:00.000Z'
 };
 
@@ -54,12 +82,14 @@ describe('EditReportForm', () => {
             ...report,
             title: 'Updated report',
             summary: 'Updated summary',
+            pageUrl: 'https://example.com/updated',
             accessibilityScore: 91
         });
 
         render(
             <EditReportForm
                 report={report}
+                groups={[homepageMobileGroup, homepageDesktopGroup]}
                 onUpdated={onUpdated}
                 onDeleted={vi.fn()}
                 onCancel={vi.fn()}
@@ -72,6 +102,9 @@ describe('EditReportForm', () => {
         fireEvent.change(screen.getByLabelText('Summary'), {
             target: { value: '  Updated summary  ' }
         });
+        fireEvent.change(screen.getByLabelText('Page URL'), {
+            target: { value: '  https://example.com/updated  ' }
+        });
         fireEvent.change(screen.getByLabelText('Accessibility'), { target: { value: '91' } });
         fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
 
@@ -79,10 +112,13 @@ describe('EditReportForm', () => {
             expect(updateReport).toHaveBeenCalledWith('report-1', {
                 title: 'Updated report',
                 summary: 'Updated summary',
-                accessibilityScore: 91,
+                groupId: 'group-mobile',
+                pageUrl: 'https://example.com/updated',
                 performanceScore: 81,
+                accessibilityScore: 91,
                 seoScore: 82,
-                uxScore: 83
+                bestPracticesScore: 83,
+                agenticBrowsingScore: 84
             });
             expect(onUpdated).toHaveBeenCalledTimes(1);
         });
@@ -92,6 +128,7 @@ describe('EditReportForm', () => {
         render(
             <EditReportForm
                 report={report}
+                groups={[homepageMobileGroup]}
                 onUpdated={vi.fn()}
                 onDeleted={vi.fn()}
                 onCancel={vi.fn()}
@@ -114,6 +151,7 @@ describe('EditReportForm', () => {
         render(
             <EditReportForm
                 report={report}
+                groups={[homepageMobileGroup]}
                 onUpdated={vi.fn()}
                 onDeleted={vi.fn()}
                 onCancel={vi.fn()}
@@ -121,7 +159,7 @@ describe('EditReportForm', () => {
         );
 
         expect(screen.queryByRole('button', { name: 'Import PageSpeed data' })).not.toBeInTheDocument();
-        expect(screen.queryByLabelText('Page URL')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Page URL')).toHaveValue('https://example.com/original');
         expect(screen.queryByLabelText('Strategy')).not.toBeInTheDocument();
     });
 
@@ -141,6 +179,7 @@ describe('EditReportForm', () => {
         render(
             <EditReportForm
                 report={reportWithInsights}
+                groups={[homepageMobileGroup]}
                 onUpdated={onUpdated}
                 onDeleted={vi.fn()}
                 onCancel={vi.fn()}
@@ -156,10 +195,62 @@ describe('EditReportForm', () => {
             expect(updateReport).toHaveBeenCalledWith('report-1', {
                 title: 'Updated report',
                 summary: 'Original summary',
-                accessibilityScore: 80,
+                groupId: 'group-mobile',
+                pageUrl: 'https://example.com/original',
                 performanceScore: 81,
+                accessibilityScore: 80,
                 seoScore: 82,
-                uxScore: 83
+                bestPracticesScore: 83,
+                agenticBrowsingScore: 84
+            });
+            expect(onUpdated).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    it('updates the report group and defaults the page URL from the selected group', async () => {
+        const onUpdated = vi.fn();
+
+        vi.mocked(updateReport).mockResolvedValue({
+            ...report,
+            groupId: 'group-desktop',
+            group: {
+                id: 'group-desktop',
+                name: 'Homepage desktop',
+                pageUrl: 'https://example.com/desktop',
+                strategy: 'desktop'
+            },
+            pageUrl: 'https://example.com/desktop'
+        });
+
+        render(
+            <EditReportForm
+                report={report}
+                groups={[homepageMobileGroup, homepageDesktopGroup]}
+                onUpdated={onUpdated}
+                onDeleted={vi.fn()}
+                onCancel={vi.fn()}
+            />
+        );
+
+        fireEvent.change(screen.getByLabelText('Report group'), {
+            target: { value: 'group-desktop' }
+        });
+
+        expect(screen.getByLabelText('Page URL')).toHaveValue('https://example.com/desktop');
+
+        fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
+
+        await waitFor(() => {
+            expect(updateReport).toHaveBeenCalledWith('report-1', {
+                title: 'Original report',
+                summary: 'Original summary',
+                groupId: 'group-desktop',
+                pageUrl: 'https://example.com/desktop',
+                performanceScore: 81,
+                accessibilityScore: 80,
+                seoScore: 82,
+                bestPracticesScore: 83,
+                agenticBrowsingScore: 84
             });
             expect(onUpdated).toHaveBeenCalledTimes(1);
         });

@@ -9,7 +9,10 @@ import {
 import type {
     PaginatedResponse,
     Project,
+    ProjectListItem,
     Report,
+    ReportGroup,
+    ReportGroupTrend,
     ReportInsights,
     ReportInsightsImportInput
 } from '../types/api';
@@ -36,13 +39,32 @@ type CreateProjectInput = {
 };
 
 type CreateReportInput = {
+    groupId: string;
     title: string;
     summary: string;
-    accessibilityScore: number;
+    pageUrl: string;
     performanceScore: number;
+    accessibilityScore: number;
     seoScore: number;
-    uxScore: number;
+    bestPracticesScore: number;
+    agenticBrowsingScore: number;
     insights?: ReportInsights | null;
+};
+
+type CreateReportGroupInput = {
+    name: string;
+    pageUrl: string;
+    strategy: ReportGroup['strategy'];
+};
+
+type ReportGroupResponse = Partial<ReportGroup> & {
+    groupId?: string;
+    group_id?: string;
+    reportGroupId?: string;
+    report_group_id?: string;
+    project_id?: string;
+    page_url?: string;
+    created_at?: string;
 };
 
 type UpdateProjectInput = {
@@ -51,12 +73,15 @@ type UpdateProjectInput = {
 };
 
 type UpdateReportInput = {
+    groupId?: string;
     title?: string;
     summary?: string;
-    accessibilityScore?: number;
+    pageUrl?: string;
     performanceScore?: number;
+    accessibilityScore?: number;
     seoScore?: number;
-    uxScore?: number;
+    bestPracticesScore?: number;
+    agenticBrowsingScore?: number;
 };
 
 type GetProjectReportsOptions = {
@@ -65,6 +90,11 @@ type GetProjectReportsOptions = {
     search?: string;
     sort?: ReportSort;
     order?: SortOrder;
+    groupId?: string;
+};
+
+type GetProjectReportGroupTrendsOptions = {
+    groupId?: string;
 };
 
 function updateReport(id: string, input: UpdateReportInput) {
@@ -81,11 +111,61 @@ function updateProject(id: string, input: UpdateProjectInput) {
     });
 }
 
+function getRequiredString(value: unknown) {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function assertCreateReportInput(input: CreateReportInput) {
+    const requiredStrings: Array<[keyof CreateReportInput, string]> = [
+        ['groupId', 'Choose a report group.'],
+        ['title', 'Enter a report title.'],
+        ['summary', 'Enter a report summary.'],
+        ['pageUrl', 'Enter a page URL.']
+    ];
+
+    for (const [key, message] of requiredStrings) {
+        if (!getRequiredString(input[key])) {
+            throw new Error(message);
+        }
+    }
+}
+
 function createReport(projectId: string, input: CreateReportInput) {
+    assertCreateReportInput(input);
+
     return apiFetch<Report>(`/projects/${encodePathSegment(projectId)}/reports`, {
         method: 'POST',
         bodyJson: input
     });
+}
+
+function normaliseReportGroup(response: ReportGroupResponse): ReportGroup {
+    return {
+        id:
+            response.id ||
+            response.groupId ||
+            response.group_id ||
+            response.reportGroupId ||
+            response.report_group_id ||
+            '',
+        projectId: response.projectId || response.project_id || '',
+        name: response.name || '',
+        pageUrl: response.pageUrl || response.page_url || '',
+        strategy: response.strategy || 'mobile',
+        createdAt: response.createdAt || response.created_at || ''
+    };
+}
+
+async function createReportGroup(projectId: string, input: CreateReportGroupInput) {
+    const group = await apiFetch<ReportGroupResponse>(
+        `/projects/${encodePathSegment(projectId)}/report-groups`,
+        {
+            method: 'POST',
+            bodyJson: input
+        }
+    );
+
+    return normaliseReportGroup(group);
 }
 
 function importReportInsights(projectId: string, input: ReportInsightsImportInput) {
@@ -113,11 +193,32 @@ function getProjects(options: GetProjectsOptions = {}) {
                 : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc')
     });
 
-    return apiFetch<PaginatedResponse<Project>>(`/projects${query}`);
+    return apiFetch<PaginatedResponse<ProjectListItem>>(`/projects${query}`);
 }
 
 function getProjectById(id: string) {
     return apiFetch<Project>(`/projects/${encodePathSegment(id)}`);
+}
+
+async function getProjectReportGroups(id: string) {
+    const groups = await apiFetch<ReportGroupResponse[]>(
+        `/projects/${encodePathSegment(id)}/report-groups`
+    );
+
+    return groups.map(normaliseReportGroup);
+}
+
+function getProjectReportGroupTrends(
+    id: string,
+    options: GetProjectReportGroupTrendsOptions = {}
+) {
+    const query = buildQuery({
+        groupId: options.groupId
+    });
+
+    return apiFetch<ReportGroupTrend[]>(
+        `/projects/${encodePathSegment(id)}/report-group-trends${query}`
+    );
 }
 
 function getProjectReports(id: string, options: GetProjectReportsOptions = {}) {
@@ -132,7 +233,8 @@ function getProjectReports(id: string, options: GetProjectReportsOptions = {}) {
         order:
             options.order === undefined
                 ? undefined
-                : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc')
+                : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc'),
+        groupId: options.groupId
     });
 
     return apiFetch<PaginatedResponse<Report>>(
@@ -165,8 +267,11 @@ export {
     REPORT_SORT_OPTIONS,
     getProjects,
     getProjectById,
+    getProjectReportGroups,
+    getProjectReportGroupTrends,
     getProjectReports,
     createProject,
+    createReportGroup,
     createReport,
     importReportInsights,
     updateProject,

@@ -92,6 +92,17 @@ VITE_ENABLE_PAGESPEED_IMPORT=true
 
 The frontend never stores or reads a Google API key. PageSpeed and CrUX keys belong in the API service only.
 
+### Local visual test data
+
+For UI checks without a running API, point the app at the built-in read-only mock API.
+
+```env
+VITE_API_BASE_URL=/mock-api
+VITE_ENABLE_PAGESPEED_IMPORT=true
+```
+
+This mock returns a demo user automatically, multiple projects, compact project summary stats, mobile and desktop homepage report groups, and repeated reports with score deltas, trend history, PageSpeed metrics, page weight, Lighthouse metadata, opportunities, failed/warning audits, and User Timing data. It includes a more polished `Crayons & Code` project, a lower-scoring `Harbour Homeware` project so the report trend charts can be checked against a more realistic improvement path, and a blank project for empty summary states. It is intended for visual checks only; unsupported write requests return a mock API error.
+
 ## Local setup
 
 ### 1. Install dependencies

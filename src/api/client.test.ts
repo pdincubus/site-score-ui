@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiFetch, setOnUnauthorized } from './client';
+import type { PaginatedResponse, Project, Report, ReportGroupTrend } from '../types/api';
 
 describe('apiFetch', () => {
     afterEach(() => {
@@ -68,6 +69,70 @@ describe('apiFetch', () => {
         await expect(apiFetchWithMissingBaseUrl('/projects')).rejects.toThrow(
             'Missing VITE_API_BASE_URL environment variable'
         );
+    });
+
+    it('serves representative visual report data from the local mock API', async () => {
+        vi.resetModules();
+        vi.stubEnv('VITE_API_BASE_URL', '/mock-api');
+
+        const { apiFetch: mockApiFetch } = await import('./client');
+
+        const projectResponse =
+            await mockApiFetch<PaginatedResponse<Project>>('/projects');
+        const reportResponse = await mockApiFetch<PaginatedResponse<Report>>(
+            '/projects/project-crayons-code/reports'
+        );
+        const trendResponse = await mockApiFetch<ReportGroupTrend[]>(
+            '/projects/project-crayons-code/report-group-trends'
+        );
+        const latestReport = reportResponse.data[0];
+        const mobileTrend = trendResponse.find((trend) => trend.groupId === 'group-home-mobile');
+
+        expect(projectResponse.data[0]?.name).toBe('Crayons & Code');
+        expect(latestReport?.insights?.metrics.pageWeight?.value).toBeGreaterThan(0);
+        expect(latestReport?.insights?.opportunities.length).toBeGreaterThan(0);
+        expect(latestReport?.insights?.auditRefs?.length).toBeGreaterThan(0);
+        expect(latestReport?.insights?.userTimings?.length).toBeGreaterThan(0);
+        expect(latestReport?.comparison?.scores.performanceScore).not.toBe(0);
+        expect(latestReport?.comparison?.userTimings?.length).toBeGreaterThan(0);
+        expect(mobileTrend?.points.map((point) => point.title)).toEqual([
+            'Homepage mobile - May baseline',
+            'Homepage mobile - June baseline',
+            'Homepage mobile - July snapshot'
+        ]);
+    });
+
+    it('serves a low-scoring client project with a clearer improvement trend', async () => {
+        vi.resetModules();
+        vi.stubEnv('VITE_API_BASE_URL', '/mock-api');
+
+        const { apiFetch: mockApiFetch } = await import('./client');
+
+        const projectResponse =
+            await mockApiFetch<PaginatedResponse<Project>>('/projects');
+        const trendResponse = await mockApiFetch<ReportGroupTrend[]>(
+            '/projects/project-harbour-homeware/report-group-trends?groupId=group-harbour-home-mobile'
+        );
+        const reportResponse = await mockApiFetch<PaginatedResponse<Report>>(
+            '/projects/project-harbour-homeware/reports?groupId=group-harbour-home-mobile&sort=createdAt&order=asc'
+        );
+        const mobileTrend = trendResponse[0];
+
+        expect(projectResponse.data.map((project) => project.name)).toContain('Harbour Homeware');
+        expect(mobileTrend?.points.map((point) => point.performanceScore)).toEqual([
+            28,
+            36,
+            48,
+            61
+        ]);
+        expect(mobileTrend?.points.map((point) => point.agenticBrowsingScore)).toEqual([
+            42,
+            49,
+            58,
+            67
+        ]);
+        expect(reportResponse.data[0]?.comparison).toBeNull();
+        expect(reportResponse.data[3]?.comparison?.scores.performanceScore).toBe(13);
     });
 
     it('uses fallback error message for non-json failures', async () => {

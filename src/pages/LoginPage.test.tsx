@@ -64,6 +64,21 @@ describe('LoginPage', () => {
         expect(screen.getByLabelText('Password')).toBeRequired();
     });
 
+    it('explains slow session checks while auth is loading', () => {
+        authState.isLoading = true;
+
+        render(
+            <MemoryRouter>
+                <LoginPage />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByText('Checking your session')).toBeInTheDocument();
+        expect(
+            screen.getByText('If the API has been idle, this can take a few seconds while it wakes up.')
+        ).toBeInTheDocument();
+    });
+
     it('submits credentials and navigates on successful login', async () => {
         loginMock.mockResolvedValue(undefined);
 

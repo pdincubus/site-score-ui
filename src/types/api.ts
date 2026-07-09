@@ -12,11 +12,32 @@ export type Project = {
     createdAt: string;
 };
 
+export type ProjectSummaryScores = {
+    performanceScore: number;
+    accessibilityScore: number;
+    seoScore: number;
+    bestPracticesScore: number;
+    agenticBrowsingScore: number;
+};
+
+export type ProjectSummary = {
+    reportCount: number;
+    reportGroupCount: number;
+    latestReportCreatedAt: string | null;
+    latestReportTitle: string | null;
+    latestScores: ProjectSummaryScores | null;
+};
+
+export type ProjectListItem = Project & {
+    summary: ProjectSummary;
+};
+
 export type PageSpeedStrategy = 'mobile' | 'desktop';
 
 export type ReportInsightsSource = 'PAGESPEED' | 'CRUX';
 
 export type ReportInsightMetricName =
+    | 'pageWeight'
     | 'firstContentfulPaint'
     | 'largestContentfulPaint'
     | 'cumulativeLayoutShift'
@@ -27,7 +48,7 @@ export type ReportInsightMetricName =
 
 export type ReportInsightMetric = {
     value: number | null;
-    unit: 'ms' | 'score' | 'unitless';
+    unit: 'ms' | 'score' | 'unitless' | 'bytes';
     displayValue: string | null;
     category?: string | null;
 };
@@ -38,6 +59,38 @@ export type ReportInsightOpportunity = {
     displayValue: string | null;
     score: number | null;
     overallSavingsMs: number | null;
+};
+
+export type ReportInsightAuditSeverity = 'pass' | 'fail' | 'warning' | 'not-tested';
+
+export type ReportInsightAuditRef = {
+    id: string;
+    title: string;
+    category: string;
+    severity: ReportInsightAuditSeverity;
+    displayValue: string | null;
+    score: number | null;
+};
+
+export type ReportInsightUserTimingEntryType = 'mark' | 'measure';
+
+export type ReportInsightUserTiming = {
+    name: string;
+    entryType: ReportInsightUserTimingEntryType;
+    startTime: number | null;
+    duration: number | null;
+    displayValue: string | null;
+};
+
+export type ReportInsightUserTimingComparison = {
+    name: string;
+    entryType: ReportInsightUserTimingEntryType;
+    currentValue: number | null;
+    previousValue: number | null;
+    delta: number | null;
+    unit: 'ms';
+    previousReportId?: string;
+    previousCreatedAt?: string;
 };
 
 export type ReportInsights = {
@@ -52,6 +105,7 @@ export type ReportInsights = {
         accessibility: number | null;
         bestPractices: number | null;
         seo: number | null;
+        agenticBrowsing: number | null;
     };
     metrics: Partial<Record<ReportInsightMetricName, ReportInsightMetric>>;
     fieldData?: {
@@ -60,6 +114,8 @@ export type ReportInsights = {
         metrics: Partial<Record<ReportInsightMetricName, ReportInsightMetric>>;
     } | null;
     opportunities: ReportInsightOpportunity[];
+    auditRefs?: ReportInsightAuditRef[];
+    userTimings?: ReportInsightUserTiming[];
 };
 
 export type ReportInsightsImportInput = {
@@ -68,16 +124,67 @@ export type ReportInsightsImportInput = {
     strategy: PageSpeedStrategy;
 };
 
+export type ReportGroup = {
+    id: string;
+    projectId: string;
+    name: string;
+    pageUrl: string;
+    strategy: PageSpeedStrategy;
+    createdAt: string;
+};
+
+export type ReportGroupSummary = Pick<ReportGroup, 'id' | 'name' | 'pageUrl' | 'strategy'>;
+
+export type ReportTrendPoint = {
+    id: string;
+    title: string;
+    pageUrl: string;
+    createdAt: string;
+    performanceScore: number;
+    accessibilityScore: number;
+    seoScore: number;
+    bestPracticesScore: number;
+    agenticBrowsingScore: number;
+};
+
+export type ReportGroupTrend = {
+    groupId: string;
+    groupName: string;
+    pageUrl: string;
+    strategy: PageSpeedStrategy;
+    points: ReportTrendPoint[];
+};
+
+export type ReportScoreComparison = {
+    performanceScore: number;
+    accessibilityScore: number;
+    seoScore: number;
+    bestPracticesScore: number;
+    agenticBrowsingScore: number;
+};
+
+export type ReportComparison = {
+    previousReportId: string;
+    previousCreatedAt: string;
+    scores: ReportScoreComparison;
+    userTimings?: ReportInsightUserTimingComparison[];
+};
+
 export type Report = {
     id: string;
     projectId: string;
+    groupId: string | null;
+    group?: ReportGroupSummary | null;
     title: string;
     summary: string;
-    accessibilityScore: number;
+    pageUrl: string;
     performanceScore: number;
+    accessibilityScore: number;
     seoScore: number;
-    uxScore: number;
+    bestPracticesScore: number;
+    agenticBrowsingScore: number;
     insights?: ReportInsights | null;
+    comparison?: ReportComparison | null;
     createdAt: string;
 };
 

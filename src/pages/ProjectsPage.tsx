@@ -7,14 +7,57 @@ import { Loading } from '../components/feedback/Loading';
 import { ModalDialog } from '../components/feedback/ModalDialog';
 import { CreateProjectForm } from '../components/projects/CreateProjectForm';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import type { PaginatedResponse, Project } from '../types/api';
+import type {
+    PaginatedResponse,
+    Project,
+    ProjectListItem,
+    ProjectSummaryScores
+} from '../types/api';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+
+function formatProjectDate(value: string) {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat('en-GB', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+    }).format(date);
+}
+
+function formatCount(value: number, singularLabel: string) {
+    const label = value === 1 ? singularLabel : `${singularLabel}s`;
+
+    return `${value} ${label}`;
+}
+
+function getProjectSummary(project: ProjectListItem) {
+    return project.summary ?? null;
+}
+
+function getLatestAverageScore(scores: ProjectSummaryScores | null) {
+    if (!scores) {
+        return null;
+    }
+
+    const total =
+        scores.performanceScore +
+        scores.accessibilityScore +
+        scores.seoScore +
+        scores.bestPracticesScore +
+        scores.agenticBrowsingScore;
+
+    return Math.round(total / 5);
+}
 
 function ProjectsPage() {
     useDocumentTitle('Projects | Site Score UI');
 
     const [searchParams, setSearchParams] = useSearchParams();
-    const [response, setResponse] = useState<PaginatedResponse<Project> | null>(null);
+    const [response, setResponse] = useState<PaginatedResponse<ProjectListItem> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
@@ -170,7 +213,12 @@ function ProjectsPage() {
                 </div>
 
                 {isLoading ? (
-                    <Loading label='Loading projects...' centred />
+                    <Loading
+                        label='Checking your projects'
+                        description='If the API has been idle, your project list can take a few seconds to wake up.'
+                        size='large'
+                        centred
+                    />
                 ) : null}
 
                 {error ? (
@@ -187,19 +235,60 @@ function ProjectsPage() {
                             </Alert>
                         ) : (
                             <ul className='item-list'>
-                                {response.data.map((project) => (
-                                    <li key={project.id} className='item-card'>
-                                        <h2>
-                                            <Link to={`/projects/${project.id}`}>
-                                                {project.name}
-                                            </Link>
-                                        </h2>
-                                        <p>{project.url}</p>
-                                        <p className='muted-text'>
-                                            Created: {new Date(project.createdAt).toLocaleString()}
-                                        </p>
-                                    </li>
-                                ))}
+                                {response.data.map((project) => {
+                                    const summary = getProjectSummary(project);
+                                    const latestAverageScore = getLatestAverageScore(
+                                        summary?.latestScores ?? null
+                                    );
+
+                                    return (
+                                        <li key={project.id} className='item-card'>
+                                            <h2>
+                                                <Link to={`/projects/${project.id}`}>
+                                                    {project.name}
+                                                </Link>
+                                            </h2>
+                                            <p className='project-card__url'>{project.url}</p>
+                                            {summary ? (
+                                                <dl className='project-summary'>
+                                                    <div>
+                                                        <dt>Created</dt>
+                                                        <dd>{formatProjectDate(project.createdAt)}</dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>Reports</dt>
+                                                        <dd>{formatCount(summary.reportCount, 'report')}</dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>Groups</dt>
+                                                        <dd>{formatCount(summary.reportGroupCount, 'group')}</dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>Latest report</dt>
+                                                        <dd title={summary.latestReportTitle || undefined}>
+                                                            {summary.latestReportCreatedAt
+                                                                ? formatProjectDate(summary.latestReportCreatedAt)
+                                                                : 'No reports yet'}
+                                                        </dd>
+                                                    </div>
+                                                    {latestAverageScore === null ? null : (
+                                                        <div className='project-summary__score'>
+                                                            <dt>Latest average score</dt>
+                                                            <dd>
+                                                                <span className='project-summary__score-value'>
+                                                                    {latestAverageScore}
+                                                                </span>
+                                                                <span className='vh'> out of 100</span>
+                                                            </dd>
+                                                        </div>
+                                                    )}
+                                                </dl>
+                                            ) : (
+                                                <p className='muted-text'>Project summary unavailable.</p>
+                                            )}
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         )}
 

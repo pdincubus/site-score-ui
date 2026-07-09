@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { deleteReport, updateReport } from '../../api/projects';
-import type { Report } from '../../types/api';
+import type { Report, ReportGroup } from '../../types/api';
 import { Alert } from '../feedback/Alert';
 import {
     ConfirmDialog,
     type ConfirmDialogHandle
 } from '../feedback/ConfirmDialog';
 import {
+    REPORT_PAGE_URL_MAX_LENGTH,
     REPORT_SUMMARY_MAX_LENGTH,
     REPORT_TITLE_MAX_LENGTH,
     SCORE_MAX,
@@ -16,6 +17,7 @@ import {
 
 type EditReportFormProps = {
     report: Report;
+    groups?: ReportGroup[];
     onUpdated: (report: Report) => void;
     onDeleted: (reportId: string) => void;
     onCancel: () => void;
@@ -23,29 +25,36 @@ type EditReportFormProps = {
 
 function EditReportForm({
     report,
+    groups = [],
     onUpdated,
     onDeleted,
     onCancel
 }: EditReportFormProps) {
     const confirmDialogRef = useRef<ConfirmDialogHandle | null>(null);
 
+    const [groupId, setGroupId] = useState(report.groupId || '');
     const [title, setTitle] = useState(report.title);
     const [summary, setSummary] = useState(report.summary);
-    const [accessibilityScore, setAccessibilityScore] = useState(String(report.accessibilityScore));
+    const [pageUrl, setPageUrl] = useState(report.pageUrl);
     const [performanceScore, setPerformanceScore] = useState(String(report.performanceScore));
+    const [accessibilityScore, setAccessibilityScore] = useState(String(report.accessibilityScore));
     const [seoScore, setSeoScore] = useState(String(report.seoScore));
-    const [uxScore, setUxScore] = useState(String(report.uxScore));
+    const [bestPracticesScore, setBestPracticesScore] = useState(String(report.bestPracticesScore));
+    const [agenticBrowsingScore, setAgenticBrowsingScore] = useState(String(report.agenticBrowsingScore));
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
+        setGroupId(report.groupId || '');
         setTitle(report.title);
         setSummary(report.summary);
-        setAccessibilityScore(String(report.accessibilityScore));
+        setPageUrl(report.pageUrl);
         setPerformanceScore(String(report.performanceScore));
+        setAccessibilityScore(String(report.accessibilityScore));
         setSeoScore(String(report.seoScore));
-        setUxScore(String(report.uxScore));
+        setBestPracticesScore(String(report.bestPracticesScore));
+        setAgenticBrowsingScore(String(report.agenticBrowsingScore));
     }, [report]);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -53,12 +62,15 @@ function EditReportForm({
         setError('');
 
         const validation = validateReportForm({
+            groupId,
             title,
             summary,
-            accessibilityScore,
+            pageUrl,
             performanceScore,
+            accessibilityScore,
             seoScore,
-            uxScore
+            bestPracticesScore,
+            agenticBrowsingScore
         });
 
         if (!validation.data) {
@@ -76,6 +88,17 @@ function EditReportForm({
             setError(err instanceof Error ? err.message : 'Failed to update report');
         } finally {
             setIsSubmitting(false);
+        }
+    }
+
+    function handleGroupChange(event: React.ChangeEvent<HTMLSelectElement>) {
+        const nextGroupId = event.target.value;
+        const nextGroup = groups.find((group) => group.id === nextGroupId);
+
+        setGroupId(nextGroupId);
+
+        if (nextGroup) {
+            setPageUrl(nextGroup.pageUrl);
         }
     }
 
@@ -109,6 +132,23 @@ function EditReportForm({
         <>
             <form onSubmit={handleSubmit} className='form-stack'>
                 <label>
+                    <span>Report group</span>
+                    <select
+                        value={groupId}
+                        onChange={handleGroupChange}
+                        required
+                        disabled={isSubmitting || isDeleting}
+                    >
+                        <option value=''>Choose a report group</option>
+                        {groups.map((group) => (
+                            <option key={group.id} value={group.id}>
+                                {group.name}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <label>
                     <span>Title</span>
                     <input
                         type='text'
@@ -130,20 +170,18 @@ function EditReportForm({
                     />
                 </label>
 
-                <div className='score-form-grid'>
-                    <label>
-                        <span>Accessibility</span>
-                        <input
-                            type='number'
-                            min={SCORE_MIN}
-                            max={SCORE_MAX}
-                            step='1'
-                            value={accessibilityScore}
-                            onChange={(event) => setAccessibilityScore(event.target.value)}
-                            required
-                        />
-                    </label>
+                <label>
+                    <span>Page URL</span>
+                    <input
+                        type='url'
+                        value={pageUrl}
+                        onChange={(event) => setPageUrl(event.target.value)}
+                        required
+                        maxLength={REPORT_PAGE_URL_MAX_LENGTH}
+                    />
+                </label>
 
+                <div className='score-form-grid'>
                     <label>
                         <span>Performance</span>
                         <input
@@ -153,6 +191,19 @@ function EditReportForm({
                             step='1'
                             value={performanceScore}
                             onChange={(event) => setPerformanceScore(event.target.value)}
+                            required
+                        />
+                    </label>
+
+                    <label>
+                        <span>Accessibility</span>
+                        <input
+                            type='number'
+                            min={SCORE_MIN}
+                            max={SCORE_MAX}
+                            step='1'
+                            value={accessibilityScore}
+                            onChange={(event) => setAccessibilityScore(event.target.value)}
                             required
                         />
                     </label>
@@ -171,14 +222,27 @@ function EditReportForm({
                     </label>
 
                     <label>
-                        <span>UX</span>
+                        <span>Best practices</span>
                         <input
                             type='number'
                             min={SCORE_MIN}
                             max={SCORE_MAX}
                             step='1'
-                            value={uxScore}
-                            onChange={(event) => setUxScore(event.target.value)}
+                            value={bestPracticesScore}
+                            onChange={(event) => setBestPracticesScore(event.target.value)}
+                            required
+                        />
+                    </label>
+
+                    <label>
+                        <span>Agentic browsing</span>
+                        <input
+                            type='number'
+                            min={SCORE_MIN}
+                            max={SCORE_MAX}
+                            step='1'
+                            value={agenticBrowsingScore}
+                            onChange={(event) => setAgenticBrowsingScore(event.target.value)}
                             required
                         />
                     </label>
