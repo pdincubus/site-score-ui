@@ -1118,6 +1118,7 @@ button:hover:not(:disabled) {
 .loading--centred {
   justify-content: center;
   width: 100%;
+  text-align: left;
 }
 
 .loading__spinner {
@@ -1143,8 +1144,22 @@ button:hover:not(:disabled) {
   height: 1.4rem;
 }
 
+.loading__content {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
 .loading__label {
   font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.loading__description {
+  max-width: 34rem;
+  color: rgb(255 255 255 / 66%);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .page > .alert,
@@ -1270,6 +1285,12 @@ button:hover:not(:disabled) {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading__spinner {
+    animation: none;
   }
 }
 

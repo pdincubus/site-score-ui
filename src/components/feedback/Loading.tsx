@@ -2,12 +2,14 @@ type LoadingSize = 'small' | 'medium' | 'large';
 
 type LoadingProps = {
     label?: string;
+    description?: string;
     size?: LoadingSize;
     centred?: boolean;
 };
 
 function Loading({
-    label = 'Loading...',
+    label = 'Connecting to Site Score...',
+    description,
     size = 'medium',
     centred = false
 }: LoadingProps) {
@@ -18,7 +20,12 @@ function Loading({
             aria-live='polite'
         >
             <span className='loading__spinner' aria-hidden='true' />
-            <span className='loading__label'>{label}</span>
+            <span className='loading__content'>
+                <span className='loading__label'>{label}</span>
+                {description ? (
+                    <span className='loading__description'>{description}</span>
+                ) : null}
+            </span>
         </div>
     );
 }

@@ -213,7 +213,11 @@ function ProjectsPage() {
                 </div>
 
                 {isLoading ? (
-                    <Loading label='Loading projects...' centred />
+                    <Loading
+                        label='Loading your projects'
+                        description='The API may be waking from an idle state. This usually clears in a few seconds.'
+                        centred
+                    />
                 ) : null}
 
                 {error ? (

@@ -500,7 +500,12 @@ function ProjectDetailPage() {
             </p>
 
             {isLoading ? (
-                <Loading label='Loading project...' size='large' centred />
+                <Loading
+                    label='Loading project details'
+                    description='The API may be waking from an idle state. This usually clears in a few seconds.'
+                    size='large'
+                    centred
+                />
             ) : null}
 
             {error ? (

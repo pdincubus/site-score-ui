@@ -19,7 +19,12 @@ function LoginPage() {
     if (isLoading) {
         return (
             <section className='page'>
-                <Loading label='Checking your session...' size='large' centred />
+                <Loading
+                    label='Checking your session'
+                    description='If the API has been idle, this can take a few seconds while it wakes up.'
+                    size='large'
+                    centred
+                />
             </section>
         );
     }
