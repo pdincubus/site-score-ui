@@ -76,8 +76,7 @@ describe('CreateReportForm', () => {
         expect(screen.getByLabelText('Title')).toBeRequired();
         expect(screen.getByLabelText('Title')).toHaveAttribute('maxlength', '160');
         expect(screen.queryByLabelText('Summary')).not.toBeInTheDocument();
-        expect(screen.getByLabelText('Page URL')).toBeRequired();
-        expect(screen.getByLabelText('Page URL')).toHaveAttribute('maxlength', '2048');
+        expect(screen.queryByLabelText('Page URL')).not.toBeInTheDocument();
         expect(screen.getByLabelText('Performance')).toBeRequired();
         expect(screen.getByLabelText('Performance')).toHaveAttribute('step', '1');
         expect(screen.queryByRole('button', { name: 'Import PageSpeed data' })).not.toBeInTheDocument();
@@ -117,9 +116,6 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: '  Homepage audit  ' }
         });
-        fireEvent.change(screen.getByLabelText('Page URL'), {
-            target: { value: '  https://example.com/pricing  ' }
-        });
         fireEvent.change(screen.getByLabelText('Performance'), { target: { value: '88' } });
         fireEvent.change(screen.getByLabelText('Accessibility'), { target: { value: '92' } });
         fireEvent.change(screen.getByLabelText('SEO'), { target: { value: '90' } });
@@ -132,7 +128,7 @@ describe('CreateReportForm', () => {
                 groupId: 'group-mobile',
                 title: 'Homepage audit',
                 summary: 'Homepage audit',
-                pageUrl: 'https://example.com/pricing',
+                pageUrl: 'https://example.com/',
                 performanceScore: 88,
                 accessibilityScore: 92,
                 seoScore: 90,
@@ -154,9 +150,6 @@ describe('CreateReportForm', () => {
 
         fireEvent.change(screen.getByLabelText('Title'), {
             target: { value: 'Homepage audit' }
-        });
-        fireEvent.change(screen.getByLabelText('Page URL'), {
-            target: { value: 'https://example.com/' }
         });
         fireEvent.change(screen.getByLabelText('Accessibility'), { target: { value: '' } });
         fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
@@ -218,7 +211,7 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Group name'), {
             target: { value: '  Homepage mobile  ' }
         });
-        fireEvent.change(screen.getByLabelText('Group page URL'), {
+        fireEvent.change(screen.getByLabelText('Page URL'), {
             target: { value: '  https://example.com/  ' }
         });
         fireEvent.change(screen.getByLabelText('Title'), {
@@ -259,7 +252,7 @@ describe('CreateReportForm', () => {
         fireEvent.change(screen.getByLabelText('Group name'), {
             target: { value: 'Homepage mobile' }
         });
-        fireEvent.change(screen.getByLabelText('Group page URL'), {
+        fireEvent.change(screen.getByLabelText('Page URL'), {
             target: { value: 'https://example.com/' }
         });
         fireEvent.change(screen.getByLabelText('Title'), {
@@ -500,8 +493,9 @@ describe('CreateReportForm', () => {
             target: { value: 'group-desktop' }
         });
 
-        expect(screen.getByLabelText('Page URL')).toHaveValue('https://example.com/desktop');
-        expect(screen.getByLabelText('Strategy')).toHaveValue('desktop');
+        expect(screen.queryByLabelText('Page URL')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Strategy')).not.toBeInTheDocument();
+        expect(screen.getByText('https://example.com/desktop')).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: 'Import PageSpeed data' }));
 
