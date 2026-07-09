@@ -1,4 +1,5 @@
 import type {
+    ReportInsightAuditSeverity,
     ReportInsightMetric,
     ReportInsightMetricName,
     ReportInsightOpportunity,
@@ -17,6 +18,13 @@ const METRIC_LABELS: Array<[ReportInsightMetricName, string]> = [
     ['timeToInteractive', 'Time to Interactive'],
     ['interactionToNextPaint', 'Interaction to Next Paint']
 ];
+
+const AUDIT_SEVERITY_LABELS: Record<ReportInsightAuditSeverity, string> = {
+    pass: 'Pass',
+    fail: 'Fail',
+    warning: 'Warning',
+    'not-tested': 'Not tested'
+};
 
 type ReportInsightsSummaryProps = {
     insights: ReportInsights;
@@ -166,6 +174,10 @@ function formatAuditCategory(category: string) {
         .join(' ');
 }
 
+function formatAuditSeverity(severity: ReportInsightAuditSeverity) {
+    return AUDIT_SEVERITY_LABELS[severity];
+}
+
 function formatTimingType(entryType: ReportInsightUserTiming['entryType']) {
     return entryType === 'measure' ? 'Measure' : 'Mark';
 }
@@ -287,9 +299,7 @@ function ReportInsightsSummary({
     });
 
     const visibleOpportunities = insights.opportunities;
-    const visibleAudits = (insights.auditRefs ?? []).filter((audit) => (
-        audit.severity === 'fail' || audit.severity === 'warning'
-    ));
+    const visibleAudits = insights.auditRefs ?? [];
     const visibleUserTimings = insights.userTimings ?? [];
     const previousTimingMap = new Map(
         (previousInsights?.userTimings ?? []).map((timing) => [getUserTimingKey(timing), timing])
@@ -354,23 +364,32 @@ function ReportInsightsSummary({
 
             {visibleAudits.length > 0 ? (
                 <details className='report-insights__details'>
-                    <summary>Warnings and failed audits ({visibleAudits.length})</summary>
+                    <summary>Audit checks ({visibleAudits.length})</summary>
                     <ul className='report-insights__audit-list'>
                         {visibleAudits.map((audit) => (
-                            <li key={audit.id}>
-                                <span
-                                    className={`report-insights__severity report-insights__severity--${audit.severity}`}
-                                >
-                                    {audit.severity}
-                                </span>
-                                <span>{audit.title}</span>
-                                {audit.displayValue ? (
-                                    <span className='report-insights__audit-value'>
-                                        {audit.displayValue}
+                            <li key={audit.id} className='report-insights__audit-item'>
+                                <span className='report-insights__audit-row'>
+                                    <span className='report-insights__audit-title'>
+                                        {audit.title}
                                     </span>
-                                ) : null}
-                                <span className='report-insights__category'>
-                                    {formatAuditCategory(audit.category)}
+                                    <span
+                                        className={`report-insights__severity report-insights__severity--${audit.severity}`}
+                                    >
+                                        <span className='vh'>
+                                            Current status:{' '}
+                                        </span>
+                                        {formatAuditSeverity(audit.severity)}
+                                    </span>
+                                </span>
+                                <span className='report-insights__audit-meta'>
+                                    {audit.displayValue ? (
+                                        <span className='report-insights__audit-value'>
+                                            {audit.displayValue}
+                                        </span>
+                                    ) : null}
+                                    <span className='report-insights__category'>
+                                        {formatAuditCategory(audit.category)}
+                                    </span>
                                 </span>
                             </li>
                         ))}

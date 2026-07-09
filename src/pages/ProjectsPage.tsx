@@ -214,8 +214,9 @@ function ProjectsPage() {
 
                 {isLoading ? (
                     <Loading
-                        label='Loading your projects'
-                        description='The API may be waking from an idle state. This usually clears in a few seconds.'
+                        label='Checking your projects'
+                        description='If the API has been idle, your project list can take a few seconds to wake up.'
+                        size='large'
                         centred
                     />
                 ) : null}
@@ -277,7 +278,7 @@ function ProjectsPage() {
                                                                 <span className='project-summary__score-value'>
                                                                     {latestAverageScore}
                                                                 </span>
-                                                                <span className='visually-hidden'> out of 100</span>
+                                                                <span className='vh'> out of 100</span>
                                                             </dd>
                                                         </div>
                                                     )}

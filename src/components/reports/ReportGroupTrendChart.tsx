@@ -223,7 +223,7 @@ function ReportGroupTrendChart({ trend }: ReportGroupTrendChartProps) {
                 </svg>
             </div>
 
-            <table className='visually-hidden' aria-label={`Score trend data for ${trend.groupName}`}>
+            <table className='vh' aria-label={`Score trend data for ${trend.groupName}`}>
                 <thead>
                     <tr>
                         <th scope='col'>Report</th>

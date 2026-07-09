@@ -402,7 +402,7 @@ describe('CreateReportForm', () => {
                     id: 'tap-targets',
                     title: 'Tap targets are not sized appropriately',
                     category: 'seo',
-                    severity: 'fail',
+                    severity: 'not_tested',
                     displayValue: undefined,
                     score: 0
                 }
@@ -484,7 +484,8 @@ describe('CreateReportForm', () => {
                         ],
                         auditRefs: [
                             expect.objectContaining({
-                                displayValue: null
+                                displayValue: null,
+                                severity: 'not-tested'
                             })
                         ],
                         userTimings: [

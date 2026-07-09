@@ -61,7 +61,7 @@ export type ReportInsightOpportunity = {
     overallSavingsMs: number | null;
 };
 
-export type ReportInsightAuditSeverity = 'fail' | 'warning';
+export type ReportInsightAuditSeverity = 'pass' | 'fail' | 'warning' | 'not-tested';
 
 export type ReportInsightAuditRef = {
     id: string;

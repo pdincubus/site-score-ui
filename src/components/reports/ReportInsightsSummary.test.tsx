@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ReportInsights } from '../../types/api';
 import { ReportInsightsSummary } from './ReportInsightsSummary';
@@ -69,6 +69,22 @@ const insights: ReportInsights = {
             severity: 'fail',
             displayValue: null,
             score: 0
+        },
+        {
+            id: 'document-title',
+            title: 'Document has a title element',
+            category: 'seo',
+            severity: 'pass',
+            displayValue: null,
+            score: 1
+        },
+        {
+            id: 'manual-check',
+            title: 'Manual accessibility review',
+            category: 'accessibility',
+            severity: 'not-tested',
+            displayValue: null,
+            score: null
         }
     ],
     userTimings: [
@@ -132,16 +148,35 @@ describe('ReportInsightsSummary', () => {
         ).toBeTruthy();
     });
 
-    it('keeps opportunities and warning audits in disclosure sections', () => {
+    it('keeps opportunities and audit status pills in disclosure sections', () => {
         render(<ReportInsightsSummary insights={insights} />);
 
         expect(screen.getByText('Opportunities (1)')).toBeInTheDocument();
         expect(screen.getByText('Eliminate render-blocking resources (Potential savings of 520 ms)')).toBeInTheDocument();
-        expect(screen.getByText('Warnings and failed audits (2)')).toBeInTheDocument();
+        expect(screen.getByText('Audit checks (4)')).toBeInTheDocument();
         expect(screen.getByText('Serve images in next-gen formats')).toBeInTheDocument();
         expect(screen.getByText('Page is blocked from indexing')).toBeInTheDocument();
-        expect(screen.getByText('warning')).toBeInTheDocument();
-        expect(screen.getByText('fail')).toBeInTheDocument();
+        expect(screen.getByText('Document has a title element')).toBeInTheDocument();
+        expect(screen.getByText('Manual accessibility review')).toBeInTheDocument();
+        expect(screen.queryByText('Current status')).not.toBeInTheDocument();
+
+        const passPill = screen.getByText('Pass').closest('.report-insights__severity');
+        const warningPill = screen.getByText('Warning').closest('.report-insights__severity');
+        const failPill = screen.getByText('Fail').closest('.report-insights__severity');
+        const notTestedPill = screen.getByText('Not tested').closest('.report-insights__severity');
+
+        expect(passPill).not.toBeNull();
+        expect(warningPill).not.toBeNull();
+        expect(failPill).not.toBeNull();
+        expect(notTestedPill).not.toBeNull();
+        expect(passPill).toHaveTextContent('Current status: Pass');
+        expect(warningPill).toHaveTextContent('Current status: Warning');
+        expect(failPill).toHaveTextContent('Current status: Fail');
+        expect(notTestedPill).toHaveTextContent('Current status: Not tested');
+        expect(within(passPill as HTMLElement).getByText('Current status:')).toHaveClass('vh');
+        expect(within(warningPill as HTMLElement).getByText('Current status:')).toHaveClass('vh');
+        expect(within(failPill as HTMLElement).getByText('Current status:')).toHaveClass('vh');
+        expect(within(notTestedPill as HTMLElement).getByText('Current status:')).toHaveClass('vh');
     });
 
     it('shows additional metric changes compared with the previous report', () => {

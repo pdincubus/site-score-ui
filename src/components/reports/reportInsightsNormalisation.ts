@@ -31,7 +31,24 @@ const REPORT_INSIGHT_METRIC_UNITS: Array<ReportInsightMetric['unit']> = [
 
 const REPORT_INSIGHT_SOURCES: ReportInsightsSource[] = ['PAGESPEED', 'CRUX'];
 const PAGE_SPEED_STRATEGIES: PageSpeedStrategy[] = ['mobile', 'desktop'];
-const REPORT_INSIGHT_AUDIT_SEVERITIES: ReportInsightAuditSeverity[] = ['fail', 'warning'];
+const REPORT_INSIGHT_AUDIT_SEVERITIES: ReportInsightAuditSeverity[] = [
+    'pass',
+    'fail',
+    'warning',
+    'not-tested'
+];
+const REPORT_INSIGHT_AUDIT_SEVERITY_ALIASES: Record<string, ReportInsightAuditSeverity> = {
+    pass: 'pass',
+    passed: 'pass',
+    fail: 'fail',
+    failed: 'fail',
+    warning: 'warning',
+    warn: 'warning',
+    'not tested': 'not-tested',
+    'not-tested': 'not-tested',
+    not_tested: 'not-tested',
+    nottested: 'not-tested'
+};
 const REPORT_INSIGHT_USER_TIMING_ENTRY_TYPES: ReportInsightUserTimingEntryType[] = [
     'mark',
     'measure'
@@ -254,19 +271,31 @@ function normaliseOpportunity(value: unknown): ReportInsightOpportunity | null {
     };
 }
 
-function normaliseAuditRef(value: unknown): ReportInsightAuditRef | null {
-    if (
-        !isRecord(value) ||
-        !REPORT_INSIGHT_AUDIT_SEVERITIES.includes(value.severity as ReportInsightAuditSeverity)
-    ) {
+function normaliseAuditSeverity(value: unknown): ReportInsightAuditSeverity | null {
+    if (typeof value !== 'string') {
         return null;
     }
 
+    const normalisedValue = value.trim().toLowerCase();
+
+    if (REPORT_INSIGHT_AUDIT_SEVERITIES.includes(normalisedValue as ReportInsightAuditSeverity)) {
+        return normalisedValue as ReportInsightAuditSeverity;
+    }
+
+    return REPORT_INSIGHT_AUDIT_SEVERITY_ALIASES[normalisedValue] ?? null;
+}
+
+function normaliseAuditRef(value: unknown): ReportInsightAuditRef | null {
+    if (!isRecord(value)) {
+        return null;
+    }
+
+    const severity = normaliseAuditSeverity(value.severity);
     const id = normaliseRequiredText(value.id, 120);
     const title = normaliseRequiredText(value.title, 300);
     const category = normaliseRequiredText(value.category, 120);
 
-    if (!id || !title || !category) {
+    if (!id || !title || !category || !severity) {
         return null;
     }
 
@@ -274,7 +303,7 @@ function normaliseAuditRef(value: unknown): ReportInsightAuditRef | null {
         id,
         title,
         category,
-        severity: value.severity as ReportInsightAuditSeverity,
+        severity,
         displayValue: normaliseNullableText(value.displayValue, 300),
         score: normaliseFractionalScore(value.score)
     };

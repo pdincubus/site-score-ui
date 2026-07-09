@@ -45,6 +45,20 @@ describe('ProjectsPage', () => {
         vi.clearAllMocks();
     });
 
+    it('shows a friendly project loading state while the API responds', () => {
+        vi.mocked(getProjects).mockImplementation(() => new Promise(() => undefined));
+
+        renderProjectsPage();
+
+        expect(screen.getByRole('status')).toHaveTextContent('Checking your projects');
+        expect(
+            screen.getByText(
+                'If the API has been idle, your project list can take a few seconds to wake up.'
+            )
+        ).toBeInTheDocument();
+        expect(screen.queryByText('Loading your projects')).not.toBeInTheDocument();
+    });
+
     it('shows compact summary stats for projects with reports', async () => {
         vi.mocked(getProjects).mockResolvedValue(
             projectResponse([
