@@ -126,12 +126,12 @@ describe('project API helpers', () => {
             new Response(
                 JSON.stringify([
                     {
-                        groupId: 'group-one',
-                        projectId: 'project/one',
+                        group_id: 'group-one',
+                        project_id: 'project/one',
                         name: 'Homepage mobile',
-                        pageUrl: 'https://example.com/',
+                        page_url: 'https://example.com/',
                         strategy: 'mobile',
-                        createdAt: '2026-01-01T00:00:00.000Z'
+                        created_at: '2026-01-01T00:00:00.000Z'
                     }
                 ]),
                 {
@@ -145,6 +145,9 @@ describe('project API helpers', () => {
 
         expect(groups[0]).toMatchObject({
             id: 'group-one',
+            projectId: 'project/one',
+            pageUrl: 'https://example.com/',
+            createdAt: '2026-01-01T00:00:00.000Z',
             name: 'Homepage mobile'
         });
     });
@@ -209,12 +212,12 @@ describe('project API helpers', () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue(
             new Response(
                 JSON.stringify({
-                    groupId: 'group-one',
-                    projectId: 'project/one',
+                    report_group_id: 'group-one',
+                    project_id: 'project/one',
                     name: 'Homepage mobile',
-                    pageUrl: 'https://example.com/',
+                    page_url: 'https://example.com/',
                     strategy: 'mobile',
-                    createdAt: '2026-01-01T00:00:00.000Z'
+                    created_at: '2026-01-01T00:00:00.000Z'
                 }),
                 {
                     status: 200,
@@ -230,6 +233,26 @@ describe('project API helpers', () => {
         });
 
         expect(group.id).toBe('group-one');
+        expect(group.projectId).toBe('project/one');
+        expect(group.pageUrl).toBe('https://example.com/');
+    });
+
+    it('rejects report create payloads without a group id before calling the API', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockPaginatedResponse());
+
+        expect(() => createReport('project/one', {
+            groupId: undefined as unknown as string,
+            title: 'Report One',
+            summary: 'Summary',
+            pageUrl: 'https://example.com/',
+            performanceScore: 90,
+            accessibilityScore: 90,
+            seoScore: 90,
+            bestPracticesScore: 90,
+            agenticBrowsingScore: 90
+        })).toThrow('Choose a report group.');
+
+        expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it('serialises report create payloads with the selected group id', async () => {

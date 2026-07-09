@@ -57,8 +57,14 @@ type CreateReportGroupInput = {
     strategy: ReportGroup['strategy'];
 };
 
-type ReportGroupResponse = ReportGroup & {
+type ReportGroupResponse = Partial<ReportGroup> & {
     groupId?: string;
+    group_id?: string;
+    reportGroupId?: string;
+    report_group_id?: string;
+    project_id?: string;
+    page_url?: string;
+    created_at?: string;
 };
 
 type UpdateProjectInput = {
@@ -105,7 +111,28 @@ function updateProject(id: string, input: UpdateProjectInput) {
     });
 }
 
+function getRequiredString(value: unknown) {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function assertCreateReportInput(input: CreateReportInput) {
+    const requiredStrings: Array<[keyof CreateReportInput, string]> = [
+        ['groupId', 'Choose a report group.'],
+        ['title', 'Enter a report title.'],
+        ['summary', 'Enter a report summary.'],
+        ['pageUrl', 'Enter a page URL.']
+    ];
+
+    for (const [key, message] of requiredStrings) {
+        if (!getRequiredString(input[key])) {
+            throw new Error(message);
+        }
+    }
+}
+
 function createReport(projectId: string, input: CreateReportInput) {
+    assertCreateReportInput(input);
+
     return apiFetch<Report>(`/projects/${encodePathSegment(projectId)}/reports`, {
         method: 'POST',
         bodyJson: input
@@ -114,8 +141,18 @@ function createReport(projectId: string, input: CreateReportInput) {
 
 function normaliseReportGroup(response: ReportGroupResponse): ReportGroup {
     return {
-        ...response,
-        id: response.id || response.groupId || ''
+        id:
+            response.id ||
+            response.groupId ||
+            response.group_id ||
+            response.reportGroupId ||
+            response.report_group_id ||
+            '',
+        projectId: response.projectId || response.project_id || '',
+        name: response.name || '',
+        pageUrl: response.pageUrl || response.page_url || '',
+        strategy: response.strategy || 'mobile',
+        createdAt: response.createdAt || response.created_at || ''
     };
 }
 
