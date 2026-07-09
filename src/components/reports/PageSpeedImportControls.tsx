@@ -16,7 +16,6 @@ type PageSpeedImportControlsProps = {
     projectId: string;
     pageUrl: string;
     strategy: PageSpeedStrategy;
-    onStrategyChange: (strategy: PageSpeedStrategy) => void;
     onImported: (insights: ReportInsights) => void;
     onScoresImported: (scores: ImportedScores) => void;
     disabled?: boolean;
@@ -50,7 +49,6 @@ function PageSpeedImportControls({
     projectId,
     pageUrl,
     strategy,
-    onStrategyChange,
     onImported,
     onScoresImported,
     disabled = false
@@ -93,24 +91,10 @@ function PageSpeedImportControls({
             <div className='page-speed-import__controls'>
                 <dl className='page-speed-import__target'>
                     <div>
-                        <dt>Page URL</dt>
+                        <dt>Import target</dt>
                         <dd>{pageUrl.trim() || 'Not set'}</dd>
                     </div>
                 </dl>
-
-                <label>
-                    <span>Strategy</span>
-                    <select
-                        value={strategy}
-                        onChange={(event) =>
-                            onStrategyChange(event.target.value as PageSpeedStrategy)
-                        }
-                        disabled={disabled || isImporting}
-                    >
-                        <option value='mobile'>Mobile</option>
-                        <option value='desktop'>Desktop</option>
-                    </select>
-                </label>
 
                 <button type='button' onClick={handleImport} disabled={disabled || isImporting}>
                     {isImporting ? 'Importing...' : 'Import PageSpeed data'}

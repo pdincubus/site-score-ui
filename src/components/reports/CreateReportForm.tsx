@@ -55,10 +55,6 @@ function CreateReportForm({
         initialGroup?.strategy || 'mobile'
     );
     const [title, setTitle] = useState('');
-    const [pageUrl, setPageUrl] = useState(initialGroup?.pageUrl || defaultPageSpeedUrl);
-    const [pageSpeedStrategy, setPageSpeedStrategy] = useState<PageSpeedStrategy>(
-        initialGroup?.strategy || 'mobile'
-    );
     const [performanceScore, setPerformanceScore] = useState('80');
     const [accessibilityScore, setAccessibilityScore] = useState('80');
     const [seoScore, setSeoScore] = useState('80');
@@ -68,6 +64,15 @@ function CreateReportForm({
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const pageSpeedImportEnabled = isPageSpeedImportEnabled();
+    const selectedGroup =
+        groups.find((group) => group.id === selectedGroupId) ||
+        null;
+    const activePageUrl = isCreatingGroup
+        ? groupPageUrl
+        : selectedGroup?.pageUrl || defaultPageSpeedUrl;
+    const activeStrategy = isCreatingGroup
+        ? groupStrategy
+        : selectedGroup?.strategy || 'mobile';
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -94,13 +99,13 @@ function CreateReportForm({
         }
 
         const normalisedInsights = insights
-            ? normaliseReportInsights(insights, pageUrl, pageSpeedStrategy)
+            ? normaliseReportInsights(insights, activePageUrl, activeStrategy)
             : null;
         const validation = validateReportForm({
             groupId: isCreatingGroup ? undefined : nextGroupId,
             title,
             summary: title,
-            pageUrl,
+            pageUrl: activePageUrl,
             performanceScore,
             accessibilityScore,
             seoScore,
@@ -141,8 +146,6 @@ function CreateReportForm({
             setGroupName('');
             setGroupPageUrl(nextGroup?.pageUrl || groupPageUrl);
             setGroupStrategy(nextGroup?.strategy || groupStrategy);
-            setPageUrl(nextGroup?.pageUrl || groupPageUrl || defaultPageSpeedUrl);
-            setPageSpeedStrategy(nextGroup?.strategy || groupStrategy);
             setPerformanceScore('80');
             setAccessibilityScore('80');
             setSeoScore('80');
@@ -158,16 +161,16 @@ function CreateReportForm({
         }
     }
 
-    function clearInsightsForPageUrl(nextPageUrl: string) {
-        if (insights && nextPageUrl.trim() !== insights.testedUrl) {
+    function clearInsightsForTarget(
+        nextPageUrl: string,
+        nextStrategy: PageSpeedStrategy
+    ) {
+        if (
+            insights &&
+            (nextPageUrl.trim() !== insights.testedUrl || nextStrategy !== insights.strategy)
+        ) {
             setInsights(null);
         }
-    }
-
-    function applyGroupDefaults(group: ReportGroup) {
-        setPageUrl(group.pageUrl);
-        setPageSpeedStrategy(group.strategy);
-        clearInsightsForPageUrl(group.pageUrl);
     }
 
     function handleGroupSelectionChange(event: React.ChangeEvent<HTMLSelectElement>) {
@@ -176,7 +179,7 @@ function CreateReportForm({
         if (value === NEW_GROUP_VALUE) {
             setIsCreatingGroup(true);
             setSelectedGroupId('');
-            setGroupPageUrl(pageUrl || defaultPageSpeedUrl);
+            setGroupPageUrl(activePageUrl || defaultPageSpeedUrl);
             return;
         }
 
@@ -186,7 +189,7 @@ function CreateReportForm({
         const group = groups.find((item) => item.id === value);
 
         if (group) {
-            applyGroupDefaults(group);
+            clearInsightsForTarget(group.pageUrl, group.strategy);
         }
     }
 
@@ -194,15 +197,14 @@ function CreateReportForm({
         const nextPageUrl = event.target.value;
 
         setGroupPageUrl(nextPageUrl);
-        setPageUrl(nextPageUrl);
-        clearInsightsForPageUrl(nextPageUrl);
+        clearInsightsForTarget(nextPageUrl, groupStrategy);
     }
 
     function handleGroupStrategyChange(event: React.ChangeEvent<HTMLSelectElement>) {
         const nextStrategy = event.target.value as PageSpeedStrategy;
 
         setGroupStrategy(nextStrategy);
-        setPageSpeedStrategy(nextStrategy);
+        clearInsightsForTarget(groupPageUrl, nextStrategy);
     }
 
     function handleScoresImported(scores: {
@@ -236,22 +238,11 @@ function CreateReportForm({
     function handleInsightsImported(importedInsights: ReportInsights) {
         const normalisedInsights = normaliseReportInsights(
             importedInsights,
-            pageUrl,
-            pageSpeedStrategy
+            activePageUrl,
+            activeStrategy
         );
 
         setInsights(normalisedInsights);
-        setPageUrl(normalisedInsights.testedUrl);
-    }
-
-    function handlePageUrlChange(event: React.ChangeEvent<HTMLInputElement>) {
-        const nextPageUrl = event.target.value;
-
-        setPageUrl(nextPageUrl);
-
-        if (insights && nextPageUrl.trim() !== insights.testedUrl) {
-            setInsights(null);
-        }
     }
 
     const form = (
@@ -295,7 +286,7 @@ function CreateReportForm({
                         </label>
 
                         <label>
-                            <span>Group page URL</span>
+                            <span>Page URL</span>
                             <input
                                 type='url'
                                 value={groupPageUrl}
@@ -308,7 +299,7 @@ function CreateReportForm({
                         </label>
 
                         <label>
-                            <span>Group strategy</span>
+                            <span>Strategy</span>
                             <select
                                 value={groupStrategy}
                                 onChange={handleGroupStrategyChange}
@@ -334,24 +325,11 @@ function CreateReportForm({
                 />
             </label>
 
-            <label>
-                <span>Page URL</span>
-                <input
-                    type='url'
-                    value={pageUrl}
-                    onChange={handlePageUrlChange}
-                    placeholder='https://example.com/'
-                    required
-                    maxLength={REPORT_PAGE_URL_MAX_LENGTH}
-                />
-            </label>
-
             {pageSpeedImportEnabled ? (
                 <PageSpeedImportControls
                     projectId={projectId}
-                    pageUrl={pageUrl}
-                    strategy={pageSpeedStrategy}
-                    onStrategyChange={setPageSpeedStrategy}
+                    pageUrl={activePageUrl}
+                    strategy={activeStrategy}
                     onImported={handleInsightsImported}
                     onScoresImported={handleScoresImported}
                     disabled={isSubmitting}
