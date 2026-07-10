@@ -9,8 +9,19 @@ export type Project = {
     id: string;
     name: string;
     url: string;
+    clientId: string | null;
+    archivedAt: string | null;
     createdAt: string;
 };
+
+export type Client = {
+    id: string;
+    name: string;
+    archivedAt: string | null;
+    createdAt: string;
+};
+
+export type ResourceStatus = 'active' | 'archived' | 'all';
 
 export type ProjectSummaryScores = {
     performanceScore: number;
@@ -185,6 +196,7 @@ export type Report = {
     agenticBrowsingScore: number;
     insights?: ReportInsights | null;
     comparison?: ReportComparison | null;
+    archivedAt?: string | null;
     createdAt: string;
 };
 

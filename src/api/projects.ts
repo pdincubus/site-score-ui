@@ -10,6 +10,7 @@ import type {
     PaginatedResponse,
     Project,
     ProjectListItem,
+    ResourceStatus,
     Report,
     ReportGroup,
     ReportGroupTrend,
@@ -20,6 +21,7 @@ import type {
 const PROJECT_SORT_OPTIONS = ['createdAt', 'name'] as const;
 const REPORT_SORT_OPTIONS = ['createdAt', 'title'] as const;
 const ORDER_OPTIONS = ['asc', 'desc'] as const;
+const STATUS_OPTIONS = ['active', 'archived', 'all'] as const;
 
 type ProjectSort = (typeof PROJECT_SORT_OPTIONS)[number];
 type ReportSort = (typeof REPORT_SORT_OPTIONS)[number];
@@ -31,11 +33,13 @@ type GetProjectsOptions = {
     search?: string;
     sort?: ProjectSort;
     order?: SortOrder;
+    status?: ResourceStatus;
 };
 
 type CreateProjectInput = {
     name: string;
     url: string;
+    clientId?: string | null;
 };
 
 type CreateReportInput = {
@@ -70,6 +74,7 @@ type ReportGroupResponse = Partial<ReportGroup> & {
 type UpdateProjectInput = {
     name?: string;
     url?: string;
+    clientId?: string | null;
 };
 
 type UpdateReportInput = {
@@ -91,6 +96,7 @@ type GetProjectReportsOptions = {
     sort?: ReportSort;
     order?: SortOrder;
     groupId?: string;
+    status?: ResourceStatus;
 };
 
 type GetProjectReportGroupTrendsOptions = {
@@ -190,7 +196,11 @@ function getProjects(options: GetProjectsOptions = {}) {
         order:
             options.order === undefined
                 ? undefined
-                : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc')
+                : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc'),
+        status:
+            options.status === undefined
+                ? undefined
+                : normaliseAllowedValue(options.status, STATUS_OPTIONS, 'active')
     });
 
     return apiFetch<PaginatedResponse<ProjectListItem>>(`/projects${query}`);
@@ -234,7 +244,11 @@ function getProjectReports(id: string, options: GetProjectReportsOptions = {}) {
             options.order === undefined
                 ? undefined
                 : normaliseAllowedValue(options.order, ORDER_OPTIONS, 'desc'),
-        groupId: options.groupId
+        groupId: options.groupId,
+        status:
+            options.status === undefined
+                ? undefined
+                : normaliseAllowedValue(options.status, STATUS_OPTIONS, 'active')
     });
 
     return apiFetch<PaginatedResponse<Report>>(
@@ -255,9 +269,33 @@ function deleteProject(id: string) {
     });
 }
 
+function archiveProject(id: string) {
+    return apiFetch<Project>(`/projects/${encodePathSegment(id)}/archive`, {
+        method: 'POST'
+    });
+}
+
+function restoreProject(id: string) {
+    return apiFetch<Project>(`/projects/${encodePathSegment(id)}/restore`, {
+        method: 'POST'
+    });
+}
+
 function deleteReport(id: string) {
     return apiFetch<void>(`/reports/${encodePathSegment(id)}`, {
         method: 'DELETE'
+    });
+}
+
+function archiveReport(id: string) {
+    return apiFetch<Report>(`/reports/${encodePathSegment(id)}/archive`, {
+        method: 'POST'
+    });
+}
+
+function restoreReport(id: string) {
+    return apiFetch<Report>(`/reports/${encodePathSegment(id)}/restore`, {
+        method: 'POST'
     });
 }
 
@@ -265,6 +303,7 @@ export {
     ORDER_OPTIONS,
     PROJECT_SORT_OPTIONS,
     REPORT_SORT_OPTIONS,
+    STATUS_OPTIONS,
     getProjects,
     getProjectById,
     getProjectReportGroups,
@@ -276,6 +315,10 @@ export {
     importReportInsights,
     updateProject,
     updateReport,
+    archiveProject,
+    restoreProject,
     deleteProject,
+    archiveReport,
+    restoreReport,
     deleteReport
 };

@@ -1,13 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+    archiveProject,
+    archiveReport,
     createReport,
     createReportGroup,
+    deleteProject,
+    deleteReport,
     getProjectById,
     getProjectReportGroups,
     getProjectReportGroupTrends,
     getProjectReports,
     getProjects,
     importReportInsights,
+    restoreProject,
+    restoreReport,
     updateReport
 } from './projects';
 import { setOnUnauthorized } from './client';
@@ -43,13 +49,14 @@ describe('project API helpers', () => {
             page: 0,
             limit: 5000,
             sort: 'not-a-sort' as 'createdAt',
-            order: 'sideways' as 'asc'
+            order: 'sideways' as 'asc',
+            status: 'archived'
         });
 
         const [url] = fetchSpy.mock.calls[0] ?? [];
 
         expect(String(url)).toContain(
-            '/projects?page=1&limit=50&sort=createdAt&order=desc'
+            '/projects?page=1&limit=50&sort=createdAt&order=desc&status=archived'
         );
     });
 
@@ -60,6 +67,8 @@ describe('project API helpers', () => {
                     id: 'project/one',
                     name: 'Project One',
                     url: 'https://example.com',
+                    clientId: null,
+                    archivedAt: null,
                     createdAt: '2026-01-01T00:00:00.000Z'
                 }),
                 {
@@ -84,13 +93,14 @@ describe('project API helpers', () => {
             limit: -1,
             sort: 'not-a-sort' as 'createdAt',
             order: 'sideways' as 'asc',
-            groupId: 'group/one'
+            groupId: 'group/one',
+            status: 'all'
         });
 
         const [url] = fetchSpy.mock.calls[0] ?? [];
 
         expect(String(url)).toContain(
-            '/projects/project%2Fone/reports?page=1&limit=10&sort=createdAt&order=desc&groupId=group%2Fone'
+            '/projects/project%2Fone/reports?page=1&limit=10&sort=createdAt&order=desc&groupId=group%2Fone&status=all'
         );
     });
 
@@ -391,5 +401,76 @@ describe('project API helpers', () => {
                 strategy: 'mobile'
             })
         });
+    });
+
+    it('encodes project ids for archive, restore and delete actions', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+            Promise.resolve(
+                new Response(
+                    JSON.stringify({
+                        id: 'project/one',
+                        name: 'Project One',
+                        url: 'https://example.com',
+                        clientId: null,
+                        archivedAt: '2026-07-10T10:00:00.000Z',
+                        createdAt: '2026-01-01T00:00:00.000Z'
+                    }),
+                    {
+                        status: 200,
+                        headers: { 'content-type': 'application/json' }
+                    }
+                )
+            )
+        );
+
+        await archiveProject('project/one');
+        await restoreProject('project/one');
+        await deleteProject('project/one');
+
+        expect(String(fetchSpy.mock.calls[0]?.[0])).toContain('/projects/project%2Fone/archive');
+        expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({ method: 'POST' });
+        expect(String(fetchSpy.mock.calls[1]?.[0])).toContain('/projects/project%2Fone/restore');
+        expect(fetchSpy.mock.calls[1]?.[1]).toMatchObject({ method: 'POST' });
+        expect(String(fetchSpy.mock.calls[2]?.[0])).toContain('/projects/project%2Fone');
+        expect(fetchSpy.mock.calls[2]?.[1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('encodes report ids for archive, restore and delete actions', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+            Promise.resolve(
+                new Response(
+                    JSON.stringify({
+                        id: 'report/one',
+                        projectId: 'project-one',
+                        groupId: 'group-one',
+                        title: 'Report One',
+                        summary: 'Summary',
+                        pageUrl: 'https://example.com/report',
+                        performanceScore: 90,
+                        accessibilityScore: 90,
+                        seoScore: 90,
+                        bestPracticesScore: 90,
+                        agenticBrowsingScore: 90,
+                        archivedAt: '2026-07-10T10:00:00.000Z',
+                        createdAt: '2026-01-01T00:00:00.000Z'
+                    }),
+                    {
+                        status: 200,
+                        headers: { 'content-type': 'application/json' }
+                    }
+                )
+            )
+        );
+
+        await archiveReport('report/one');
+        await restoreReport('report/one');
+        await deleteReport('report/one');
+
+        expect(String(fetchSpy.mock.calls[0]?.[0])).toContain('/reports/report%2Fone/archive');
+        expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({ method: 'POST' });
+        expect(String(fetchSpy.mock.calls[1]?.[0])).toContain('/reports/report%2Fone/restore');
+        expect(fetchSpy.mock.calls[1]?.[1]).toMatchObject({ method: 'POST' });
+        expect(String(fetchSpy.mock.calls[2]?.[0])).toContain('/reports/report%2Fone');
+        expect(fetchSpy.mock.calls[2]?.[1]).toMatchObject({ method: 'DELETE' });
     });
 });

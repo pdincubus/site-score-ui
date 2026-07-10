@@ -1,4 +1,5 @@
 import type {
+    Client,
     PageSpeedStrategy,
     PaginatedResponse,
     Project,
@@ -28,24 +29,59 @@ const demoUser: User = {
     createdAt: '2026-07-01T08:00:00.000Z'
 };
 
+const clients: Client[] = [
+    {
+        id: 'client-crayons-code',
+        name: 'Crayons & Code',
+        archivedAt: null,
+        createdAt: '2026-07-01T08:00:00.000Z'
+    },
+    {
+        id: 'client-harbour-homeware',
+        name: 'Harbour Homeware',
+        archivedAt: null,
+        createdAt: '2026-06-15T08:00:00.000Z'
+    },
+    {
+        id: 'client-archived-demo',
+        name: 'Archived demo client',
+        archivedAt: '2026-07-09T09:00:00.000Z',
+        createdAt: '2026-04-12T08:00:00.000Z'
+    }
+];
+
 const projects: Project[] = [
     {
         id: 'project-crayons-code',
         name: 'Crayons & Code',
         url: 'https://crayonsandcode.co.uk/',
+        clientId: 'client-crayons-code',
+        archivedAt: null,
         createdAt: '2026-07-01T08:30:00.000Z'
     },
     {
         id: 'project-harbour-homeware',
         name: 'Harbour Homeware',
         url: 'https://harbourhomeware.example/',
+        clientId: 'client-harbour-homeware',
+        archivedAt: null,
         createdAt: '2026-06-15T08:30:00.000Z'
     },
     {
         id: 'project-fresh-start',
         name: 'Fresh Start Studio',
         url: 'https://fresh-start.example/',
+        clientId: null,
+        archivedAt: null,
         createdAt: '2026-05-01T08:30:00.000Z'
+    },
+    {
+        id: 'project-archived-demo',
+        name: 'Archived Demo Site',
+        url: 'https://archived-demo.example/',
+        clientId: 'client-archived-demo',
+        archivedAt: '2026-07-09T09:30:00.000Z',
+        createdAt: '2026-04-12T08:30:00.000Z'
     }
 ];
 
@@ -825,12 +861,63 @@ function getSortOrder(value: string | null) {
     return value === 'asc' ? 'asc' : 'desc';
 }
 
+function getResourceStatus(value: string | null) {
+    if (value === 'archived' || value === 'all') {
+        return value;
+    }
+
+    return 'active';
+}
+
+function filterByStatus<T extends { archivedAt?: string | null }>(data: T[], status: string | null) {
+    const normalisedStatus = getResourceStatus(status);
+
+    if (normalisedStatus === 'all') {
+        return data;
+    }
+
+    return data.filter((item) =>
+        normalisedStatus === 'archived' ? Boolean(item.archivedAt) : !item.archivedAt
+    );
+}
+
+function getBodyRecord(options: MockApiFetchOptions) {
+    return options.bodyJson && typeof options.bodyJson === 'object'
+        ? (options.bodyJson as Record<string, unknown>)
+        : {};
+}
+
+function getBodyString(body: Record<string, unknown>, key: string) {
+    const value = body[key];
+
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function getBodyNullableString(body: Record<string, unknown>, key: string) {
+    const value = body[key];
+
+    if (value === null) {
+        return null;
+    }
+
+    return typeof value === 'string' ? value.trim() : undefined;
+}
+
 function sortProjects(data: Project[], sort: string | null, order: string | null) {
     const sortKey = sort === 'name' ? 'name' : 'createdAt';
     const direction = getSortOrder(order) === 'asc' ? 1 : -1;
 
     return [...data].sort((firstProject, secondProject) =>
         firstProject[sortKey].localeCompare(secondProject[sortKey]) * direction
+    );
+}
+
+function sortClients(data: Client[], sort: string | null, order: string | null) {
+    const sortKey = sort === 'name' ? 'name' : 'createdAt';
+    const direction = getSortOrder(order) === 'asc' ? 1 : -1;
+
+    return [...data].sort((firstClient, secondClient) =>
+        firstClient[sortKey].localeCompare(secondClient[sortKey]) * direction
     );
 }
 
@@ -863,7 +950,9 @@ function getLatestProjectReport(projectReports: Report[]) {
 }
 
 function getProjectSummary(projectId: string): ProjectSummary {
-    const projectReports = reports.filter((report) => report.projectId === projectId);
+    const projectReports = reports.filter(
+        (report) => report.projectId === projectId && !report.archivedAt
+    );
     const projectGroups = reportGroups.filter((group) => group.projectId === projectId);
     const latestReport = getLatestProjectReport(projectReports);
 
@@ -903,6 +992,16 @@ function searchProjects(data: Project[], search: string | null) {
     );
 }
 
+function searchClients(data: Client[], search: string | null) {
+    const query = search?.trim().toLowerCase();
+
+    if (!query) {
+        return data;
+    }
+
+    return data.filter((client) => client.name.toLowerCase().includes(query));
+}
+
 function searchReports(data: Report[], search: string | null) {
     const query = search?.trim().toLowerCase();
 
@@ -913,6 +1012,16 @@ function searchReports(data: Report[], search: string | null) {
     return data.filter((report) =>
         `${report.title} ${report.pageUrl}`.toLowerCase().includes(query)
     );
+}
+
+function getClientOrThrow(clientId: string) {
+    const client = clients.find((item) => item.id === clientId);
+
+    if (!client) {
+        throw new Error('Client not found');
+    }
+
+    return client;
 }
 
 function getProjectOrThrow(projectId: string) {
@@ -937,7 +1046,8 @@ function getReports(projectId: string, searchParams: URLSearchParams) {
     const groupId = searchParams.get('groupId');
     const page = getPositiveInteger(searchParams.get('page'), 1);
     const limit = Math.min(getPositiveInteger(searchParams.get('limit'), 10), 50);
-    const filteredReports = reports.filter((report) => {
+    const statusFilteredReports = filterByStatus(reports, searchParams.get('status'));
+    const filteredReports = statusFilteredReports.filter((report) => {
         if (report.projectId !== projectId) {
             return false;
         }
@@ -983,7 +1093,12 @@ function getReportGroupTrends(
         pageUrl: group.pageUrl,
         strategy: group.strategy,
         points: reports
-            .filter((report) => report.projectId === projectId && report.groupId === group.id)
+            .filter(
+                (report) =>
+                    report.projectId === projectId &&
+                    report.groupId === group.id &&
+                    !report.archivedAt
+            )
             .sort((firstReport, secondReport) =>
                 firstReport.createdAt.localeCompare(secondReport.createdAt)
             )
@@ -1025,6 +1140,17 @@ function createImportedInsights(input: Partial<ReportInsightsImportInput> | unde
     });
 }
 
+function createId(prefix: string, name: string) {
+    const slug = name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48);
+
+    return `${prefix}-${slug || 'item'}-${Date.now()}`;
+}
+
 async function mockApiFetch<T>(path: string, options: MockApiFetchOptions = {}): Promise<T> {
     const url = new URL(path, 'https://mock-api.local');
     const method = options.method?.toUpperCase() || 'GET';
@@ -1042,10 +1168,96 @@ async function mockApiFetch<T>(path: string, options: MockApiFetchOptions = {}):
         return undefined as T;
     }
 
+    if (method === 'GET' && url.pathname === '/clients') {
+        const page = getPositiveInteger(url.searchParams.get('page'), 1);
+        const limit = Math.min(getPositiveInteger(url.searchParams.get('limit'), 10), 50);
+        const statusFilteredClients = filterByStatus(clients, url.searchParams.get('status'));
+        const searchedClients = searchClients(statusFilteredClients, url.searchParams.get('search'));
+        const sortedClients = sortClients(
+            searchedClients,
+            url.searchParams.get('sort'),
+            url.searchParams.get('order')
+        );
+
+        return clone(paginate(sortedClients, page, limit)) as T;
+    }
+
+    if (method === 'POST' && url.pathname === '/clients') {
+        const body = getBodyRecord(options);
+        const name = getBodyString(body, 'name');
+
+        if (!name) {
+            throw new Error('Client name is required.');
+        }
+
+        const client: Client = {
+            id: createId('client', name),
+            name,
+            archivedAt: null,
+            createdAt: new Date().toISOString()
+        };
+
+        clients.unshift(client);
+
+        return clone(client) as T;
+    }
+
+    if (segments[0] === 'clients' && segments.length === 2) {
+        const client = getClientOrThrow(segments[1]);
+
+        if (method === 'GET') {
+            return clone(client) as T;
+        }
+
+        if (method === 'PATCH') {
+            const body = getBodyRecord(options);
+            const name = getBodyString(body, 'name');
+
+            if (name) {
+                client.name = name;
+            }
+
+            return clone(client) as T;
+        }
+
+        if (method === 'DELETE') {
+            const index = clients.findIndex((item) => item.id === segments[1]);
+
+            if (index >= 0) {
+                clients.splice(index, 1);
+            }
+
+            for (const project of projects) {
+                if (project.clientId === segments[1]) {
+                    project.clientId = null;
+                }
+            }
+
+            return undefined as T;
+        }
+    }
+
+    if (segments[0] === 'clients' && segments.length === 3) {
+        const client = getClientOrThrow(segments[1]);
+
+        if (method === 'POST' && segments[2] === 'archive') {
+            client.archivedAt = client.archivedAt || new Date().toISOString();
+
+            return clone(client) as T;
+        }
+
+        if (method === 'POST' && segments[2] === 'restore') {
+            client.archivedAt = null;
+
+            return clone(client) as T;
+        }
+    }
+
     if (method === 'GET' && url.pathname === '/projects') {
         const page = getPositiveInteger(url.searchParams.get('page'), 1);
         const limit = Math.min(getPositiveInteger(url.searchParams.get('limit'), 10), 50);
-        const searchedProjects = searchProjects(projects, url.searchParams.get('search'));
+        const statusFilteredProjects = filterByStatus(projects, url.searchParams.get('status'));
+        const searchedProjects = searchProjects(statusFilteredProjects, url.searchParams.get('search'));
         const sortedProjects = sortProjects(
             searchedProjects,
             url.searchParams.get('sort'),
@@ -1055,8 +1267,102 @@ async function mockApiFetch<T>(path: string, options: MockApiFetchOptions = {}):
         return clone(paginate(sortedProjects.map(toProjectListItem), page, limit)) as T;
     }
 
+    if (method === 'POST' && url.pathname === '/projects') {
+        const body = getBodyRecord(options);
+        const name = getBodyString(body, 'name');
+        const projectUrl = getBodyString(body, 'url');
+        const clientId = getBodyNullableString(body, 'clientId') ?? null;
+
+        if (!name || !projectUrl) {
+            throw new Error('Project name and URL are required.');
+        }
+
+        if (clientId) {
+            getClientOrThrow(clientId);
+        }
+
+        const project: Project = {
+            id: createId('project', name),
+            name,
+            url: projectUrl,
+            clientId,
+            archivedAt: null,
+            createdAt: new Date().toISOString()
+        };
+
+        projects.unshift(project);
+
+        return clone(project) as T;
+    }
+
     if (method === 'GET' && segments[0] === 'projects' && segments.length === 2) {
         return clone(getProjectOrThrow(segments[1])) as T;
+    }
+
+    if (method === 'PATCH' && segments[0] === 'projects' && segments.length === 2) {
+        const project = getProjectOrThrow(segments[1]);
+        const body = getBodyRecord(options);
+        const name = getBodyString(body, 'name');
+        const projectUrl = getBodyString(body, 'url');
+        const clientId = getBodyNullableString(body, 'clientId');
+
+        if (name) {
+            project.name = name;
+        }
+
+        if (projectUrl) {
+            project.url = projectUrl;
+        }
+
+        if (clientId !== undefined) {
+            if (clientId) {
+                getClientOrThrow(clientId);
+            }
+
+            project.clientId = clientId;
+        }
+
+        return clone(project) as T;
+    }
+
+    if (method === 'DELETE' && segments[0] === 'projects' && segments.length === 2) {
+        getProjectOrThrow(segments[1]);
+
+        const index = projects.findIndex((item) => item.id === segments[1]);
+
+        if (index >= 0) {
+            projects.splice(index, 1);
+        }
+
+        for (let reportIndex = reports.length - 1; reportIndex >= 0; reportIndex -= 1) {
+            if (reports[reportIndex].projectId === segments[1]) {
+                reports.splice(reportIndex, 1);
+            }
+        }
+
+        for (let groupIndex = reportGroups.length - 1; groupIndex >= 0; groupIndex -= 1) {
+            if (reportGroups[groupIndex].projectId === segments[1]) {
+                reportGroups.splice(groupIndex, 1);
+            }
+        }
+
+        return undefined as T;
+    }
+
+    if (segments[0] === 'projects' && segments.length === 3) {
+        const project = getProjectOrThrow(segments[1]);
+
+        if (method === 'POST' && segments[2] === 'archive') {
+            project.archivedAt = project.archivedAt || new Date().toISOString();
+
+            return clone(project) as T;
+        }
+
+        if (method === 'POST' && segments[2] === 'restore') {
+            project.archivedAt = null;
+
+            return clone(project) as T;
+        }
     }
 
     if (
@@ -1090,6 +1396,90 @@ async function mockApiFetch<T>(path: string, options: MockApiFetchOptions = {}):
         method === 'POST' &&
         segments[0] === 'projects' &&
         segments.length === 3 &&
+        segments[2] === 'report-groups'
+    ) {
+        getProjectOrThrow(segments[1]);
+
+        const body = getBodyRecord(options);
+        const name = getBodyString(body, 'name');
+        const pageUrl = getBodyString(body, 'pageUrl');
+        const strategy = body.strategy === 'desktop' ? 'desktop' : 'mobile';
+
+        if (!name || !pageUrl) {
+            throw new Error('Report group name and page URL are required.');
+        }
+
+        const group: ReportGroup = {
+            id: createId('group', name),
+            projectId: segments[1],
+            name,
+            pageUrl,
+            strategy,
+            createdAt: new Date().toISOString()
+        };
+
+        reportGroups.push(group);
+
+        return clone(group) as T;
+    }
+
+    if (
+        method === 'POST' &&
+        segments[0] === 'projects' &&
+        segments.length === 3 &&
+        segments[2] === 'reports'
+    ) {
+        getProjectOrThrow(segments[1]);
+
+        const body = getBodyRecord(options);
+        const groupId = getBodyString(body, 'groupId');
+        const title = getBodyString(body, 'title');
+        const summary = getBodyString(body, 'summary');
+        const pageUrl = getBodyString(body, 'pageUrl');
+        const group = reportGroups.find((item) => item.id === groupId) || null;
+
+        if (!groupId || !title || !summary || !pageUrl) {
+            throw new Error('Report group, title, summary and page URL are required.');
+        }
+
+        const report: Report = {
+            id: createId('report', title),
+            projectId: segments[1],
+            groupId,
+            group: group
+                ? {
+                    id: group.id,
+                    name: group.name,
+                    pageUrl: group.pageUrl,
+                    strategy: group.strategy
+                }
+                : null,
+            title,
+            summary,
+            pageUrl,
+            performanceScore: Number(body.performanceScore) || 0,
+            accessibilityScore: Number(body.accessibilityScore) || 0,
+            seoScore: Number(body.seoScore) || 0,
+            bestPracticesScore: Number(body.bestPracticesScore) || 0,
+            agenticBrowsingScore: Number(body.agenticBrowsingScore) || 0,
+            insights:
+                body.insights && typeof body.insights === 'object'
+                    ? (body.insights as ReportInsights)
+                    : null,
+            comparison: null,
+            archivedAt: null,
+            createdAt: new Date().toISOString()
+        };
+
+        reports.unshift(report);
+
+        return clone(report) as T;
+    }
+
+    if (
+        method === 'POST' &&
+        segments[0] === 'projects' &&
+        segments.length === 3 &&
         segments[2] === 'report-insight-imports'
     ) {
         getProjectOrThrow(segments[1]);
@@ -1097,6 +1487,73 @@ async function mockApiFetch<T>(path: string, options: MockApiFetchOptions = {}):
         return clone(
             createImportedInsights(options.bodyJson as Partial<ReportInsightsImportInput> | undefined)
         ) as T;
+    }
+
+    if (segments[0] === 'reports' && segments.length === 2) {
+        const report = reports.find((item) => item.id === segments[1]);
+
+        if (!report) {
+            throw new Error('Report not found');
+        }
+
+        if (method === 'PATCH') {
+            const body = getBodyRecord(options);
+            const groupId = getBodyString(body, 'groupId');
+            const group = groupId
+                ? reportGroups.find((item) => item.id === groupId) || null
+                : report.group || null;
+
+            report.groupId = groupId || report.groupId;
+            report.group = group
+                ? {
+                    id: group.id,
+                    name: group.name,
+                    pageUrl: group.pageUrl,
+                    strategy: group.strategy
+                }
+                : report.group || null;
+            report.title = getBodyString(body, 'title') || report.title;
+            report.summary = getBodyString(body, 'summary') || report.summary;
+            report.pageUrl = getBodyString(body, 'pageUrl') || report.pageUrl;
+            report.performanceScore = Number(body.performanceScore) || report.performanceScore;
+            report.accessibilityScore = Number(body.accessibilityScore) || report.accessibilityScore;
+            report.seoScore = Number(body.seoScore) || report.seoScore;
+            report.bestPracticesScore = Number(body.bestPracticesScore) || report.bestPracticesScore;
+            report.agenticBrowsingScore =
+                Number(body.agenticBrowsingScore) || report.agenticBrowsingScore;
+
+            return clone(report) as T;
+        }
+
+        if (method === 'DELETE') {
+            const index = reports.findIndex((item) => item.id === segments[1]);
+
+            if (index >= 0) {
+                reports.splice(index, 1);
+            }
+
+            return undefined as T;
+        }
+    }
+
+    if (segments[0] === 'reports' && segments.length === 3) {
+        const report = reports.find((item) => item.id === segments[1]);
+
+        if (!report) {
+            throw new Error('Report not found');
+        }
+
+        if (method === 'POST' && segments[2] === 'archive') {
+            report.archivedAt = report.archivedAt || new Date().toISOString();
+
+            return clone(report) as T;
+        }
+
+        if (method === 'POST' && segments[2] === 'restore') {
+            report.archivedAt = null;
+
+            return clone(report) as T;
+        }
     }
 
     throw new Error('Mock API does not support this request yet.');

@@ -8,6 +8,7 @@ import type { PaginatedResponse, ProjectListItem } from '../types/api';
 vi.mock('../api/projects', () => ({
     ORDER_OPTIONS: ['asc', 'desc'],
     PROJECT_SORT_OPTIONS: ['createdAt', 'name'],
+    STATUS_OPTIONS: ['active', 'archived', 'all'],
     getProjects: vi.fn()
 }));
 
@@ -27,9 +28,9 @@ function projectResponse(data: ProjectListItem[]): PaginatedResponse<ProjectList
     };
 }
 
-function renderProjectsPage() {
+function renderProjectsPage(initialPath = '/projects') {
     return render(
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[initialPath]}>
             <ProjectsPage />
         </MemoryRouter>
     );
@@ -66,6 +67,8 @@ describe('ProjectsPage', () => {
                     id: 'project-1',
                     name: 'Crayons & Code',
                     url: 'https://crayonsandcode.co.uk/',
+                    clientId: 'client-1',
+                    archivedAt: null,
                     createdAt: '2026-07-01T08:30:00.000Z',
                     summary: {
                         reportCount: 6,
@@ -89,6 +92,11 @@ describe('ProjectsPage', () => {
         const projectHeading = await screen.findByRole('heading', { name: 'Crayons & Code' });
         const projectCard = projectHeading.closest('li');
 
+        expect(getProjects).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: undefined
+            })
+        );
         expect(projectCard).not.toBeNull();
         expect(within(projectCard as HTMLElement).getByText('6 reports')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('2 groups')).toBeInTheDocument();
@@ -112,6 +120,8 @@ describe('ProjectsPage', () => {
                     id: 'project-empty',
                     name: 'Fresh Start Studio',
                     url: 'https://fresh-start.example/',
+                    clientId: null,
+                    archivedAt: null,
                     createdAt: '2026-07-08T08:30:00.000Z',
                     summary: {
                         reportCount: 0,
@@ -136,5 +146,40 @@ describe('ProjectsPage', () => {
         expect(
             within(projectCard as HTMLElement).queryByText('Latest average score')
         ).not.toBeInTheDocument();
+    });
+
+    it('requests and labels archived projects when the archive view is selected', async () => {
+        vi.mocked(getProjects).mockResolvedValue(
+            projectResponse([
+                {
+                    id: 'project-archived',
+                    name: 'Archived site',
+                    url: 'https://archived.example/',
+                    clientId: null,
+                    archivedAt: '2026-07-09T08:30:00.000Z',
+                    createdAt: '2026-07-01T08:30:00.000Z',
+                    summary: {
+                        reportCount: 0,
+                        reportGroupCount: 0,
+                        latestReportCreatedAt: null,
+                        latestReportTitle: null,
+                        latestScores: null
+                    }
+                }
+            ])
+        );
+
+        renderProjectsPage('/projects?status=archived');
+
+        const projectHeading = await screen.findByRole('heading', { name: 'Archived site' });
+        const projectCard = projectHeading.closest('li');
+
+        expect(getProjects).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: 'archived'
+            })
+        );
+        expect(projectCard).not.toBeNull();
+        expect(within(projectCard as HTMLElement).getByText('Archived')).toBeInTheDocument();
     });
 });

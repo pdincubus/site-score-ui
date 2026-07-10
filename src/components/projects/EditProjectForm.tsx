@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { deleteProject, updateProject } from '../../api/projects';
+import {
+    archiveProject,
+    deleteProject,
+    restoreProject,
+    updateProject
+} from '../../api/projects';
 import { Alert } from '../feedback/Alert';
 import {
     ConfirmDialog,
@@ -32,7 +37,11 @@ function EditProjectForm({
     const [url, setUrl] = useState(project.url);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isStatusUpdating, setIsStatusUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    const isArchived = Boolean(project.archivedAt);
+    const isBusy = isSubmitting || isStatusUpdating || isDeleting;
 
     useEffect(() => {
         setName(project.name);
@@ -63,6 +72,36 @@ function EditProjectForm({
             setError(err instanceof Error ? err.message : 'Failed to update project');
         } finally {
             setIsSubmitting(false);
+        }
+    }
+
+    async function handleArchiveRestore() {
+        const confirmed = await confirmDialogRef.current?.open({
+            title: isArchived ? 'Restore project' : 'Archive project',
+            message: isArchived
+                ? 'This will restore the project to the active projects list.'
+                : 'This will move the project out of the active projects list. You can restore it later.',
+            confirmLabel: isArchived ? 'Restore project' : 'Archive project',
+            cancelLabel: 'Cancel'
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        setError('');
+        setIsStatusUpdating(true);
+
+        try {
+            const updatedProject = isArchived
+                ? await restoreProject(project.id)
+                : await archiveProject(project.id);
+
+            onUpdated(updatedProject);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update project status');
+        } finally {
+            setIsStatusUpdating(false);
         }
     }
 
@@ -127,14 +166,28 @@ function EditProjectForm({
                 ) : null}
 
                 <div className='button-row'>
-                    <button type='submit' disabled={isSubmitting || isDeleting}>
+                    <button type='submit' disabled={isBusy}>
                         {isSubmitting ? 'Saving changes...' : 'Save project'}
                     </button>
 
                     <button
                         type='button'
+                        className='button-secondary'
+                        onClick={handleArchiveRestore}
+                        disabled={isBusy}
+                    >
+                        {isStatusUpdating
+                            ? 'Updating status...'
+                            : isArchived
+                                ? 'Restore project'
+                                : 'Archive project'}
+                    </button>
+
+                    <button
+                        type='button'
+                        className='button-danger'
                         onClick={handleDelete}
-                        disabled={isSubmitting || isDeleting}
+                        disabled={isBusy}
                     >
                         {isDeleting ? 'Deleting project...' : 'Delete project'}
                     </button>

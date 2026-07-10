@@ -22,6 +22,10 @@ function AppShell({ children }: { children: ReactNode }) {
                     <div className='site-header__actions'>
                         {isAuthenticated && user ? (
                             <>
+                                <nav className='site-nav' aria-label='Main navigation'>
+                                    <Link to='/projects'>Projects</Link>
+                                    <Link to='/clients'>Clients</Link>
+                                </nav>
                                 <span className='user-badge'>{user.email}</span>
                                 <button type='button' onClick={handleLogout}>
                                     Log out

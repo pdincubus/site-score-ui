@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ORDER_OPTIONS, PROJECT_SORT_OPTIONS, getProjects } from '../api/projects';
+import { ORDER_OPTIONS, PROJECT_SORT_OPTIONS, STATUS_OPTIONS, getProjects } from '../api/projects';
 import { normaliseAllowedValue, normaliseLimit, normalisePage } from '../api/query';
 import { Alert } from '../components/feedback/Alert';
 import { Loading } from '../components/feedback/Loading';
@@ -11,7 +11,8 @@ import type {
     PaginatedResponse,
     Project,
     ProjectListItem,
-    ProjectSummaryScores
+    ProjectSummaryScores,
+    ResourceStatus
 } from '../types/api';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
@@ -53,6 +54,26 @@ function getLatestAverageScore(scores: ProjectSummaryScores | null) {
     return Math.round(total / 5);
 }
 
+function getEmptyProjectsTitle(status: ResourceStatus) {
+    if (status === 'archived') {
+        return 'No archived projects found';
+    }
+
+    if (status === 'all') {
+        return 'No projects found';
+    }
+
+    return 'No active projects found';
+}
+
+function getEmptyProjectsMessage(status: ResourceStatus) {
+    if (status === 'archived') {
+        return 'Archived projects will appear here when you archive them.';
+    }
+
+    return 'Try changing your search or create a new project.';
+}
+
 function ProjectsPage() {
     useDocumentTitle('Projects | Site Score UI');
 
@@ -71,6 +92,7 @@ function ProjectsPage() {
     const search = searchParams.get('search') || '';
     const sort = normaliseAllowedValue(searchParams.get('sort'), PROJECT_SORT_OPTIONS, 'createdAt');
     const order = normaliseAllowedValue(searchParams.get('order'), ORDER_OPTIONS, 'desc');
+    const status = normaliseAllowedValue(searchParams.get('status'), STATUS_OPTIONS, 'active');
 
     const updateQuery = useCallback(
         (next: Record<string, string>) => {
@@ -99,7 +121,8 @@ function ProjectsPage() {
                 limit,
                 search,
                 sort,
-                order
+                order,
+                status: status === 'active' ? undefined : status
             });
 
             setResponse(data);
@@ -108,7 +131,7 @@ function ProjectsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [page, limit, search, sort, order]);
+    }, [page, limit, search, sort, order, status]);
 
     useEffect(() => {
         setSearchInput(search);
@@ -131,10 +154,14 @@ function ProjectsPage() {
 
     useEffect(() => {
         setSuccessMessage('');
-    }, [search, sort, order, page]);
+    }, [search, sort, order, status, page]);
 
     function handleProjectCreated(project: Project) {
         setSuccessMessage(`Project created: ${project.name}`);
+        updateQuery({
+            status: '',
+            page: '1'
+        });
         setReloadKey((value) => value + 1);
         setCreateDialogOpen(false);
     }
@@ -196,6 +223,23 @@ function ProjectsPage() {
                     </label>
 
                     <label>
+                        <span>Status</span>
+                        <select
+                            value={status}
+                            onChange={(event) =>
+                                updateQuery({
+                                    status: event.target.value === 'active' ? '' : event.target.value,
+                                    page: '1'
+                                })
+                            }
+                        >
+                            <option value='active'>Active projects</option>
+                            <option value='archived'>Archived projects</option>
+                            <option value='all'>All projects</option>
+                        </select>
+                    </label>
+
+                    <label>
                         <span>Order</span>
                         <select
                             value={order}
@@ -230,8 +274,8 @@ function ProjectsPage() {
                 {!isLoading && !error && response ? (
                     <>
                         {response.data.length === 0 ? (
-                            <Alert variant='info' title='No projects found'>
-                                Try changing your search or create a new project.
+                            <Alert variant='info' title={getEmptyProjectsTitle(status)}>
+                                {getEmptyProjectsMessage(status)}
                             </Alert>
                         ) : (
                             <ul className='item-list'>
@@ -243,11 +287,16 @@ function ProjectsPage() {
 
                                     return (
                                         <li key={project.id} className='item-card'>
-                                            <h2>
-                                                <Link to={`/projects/${project.id}`}>
-                                                    {project.name}
-                                                </Link>
-                                            </h2>
+                                            <div className='item-card__header'>
+                                                <h2>
+                                                    <Link to={`/projects/${project.id}`}>
+                                                        {project.name}
+                                                    </Link>
+                                                </h2>
+                                                {project.archivedAt ? (
+                                                    <span className='status-pill'>Archived</span>
+                                                ) : null}
+                                            </div>
                                             <p className='project-card__url'>{project.url}</p>
                                             {summary ? (
                                                 <dl className='project-summary'>

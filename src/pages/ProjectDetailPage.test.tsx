@@ -13,6 +13,7 @@ import type { PaginatedResponse, Project, Report, ReportGroup, ReportGroupTrend 
 vi.mock('../api/projects', () => ({
     ORDER_OPTIONS: ['asc', 'desc'],
     REPORT_SORT_OPTIONS: ['createdAt', 'title'],
+    STATUS_OPTIONS: ['active', 'archived', 'all'],
     getProjectById: vi.fn(),
     getProjectReportGroups: vi.fn(),
     getProjectReportGroupTrends: vi.fn(),
@@ -23,6 +24,8 @@ const project: Project = {
     id: 'project-1',
     name: 'Example Project',
     url: 'https://example.com/',
+    clientId: 'client-1',
+    archivedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z'
 };
 
@@ -223,6 +226,19 @@ describe('ProjectDetailPage', () => {
                 })
             );
         });
+    });
+
+    it('passes the selected report status to the report list request', async () => {
+        renderProjectDetailPage('/projects/project-1?status=archived');
+
+        await screen.findByRole('heading', { name: 'Homepage baseline' });
+
+        expect(getProjectReports).toHaveBeenLastCalledWith(
+            'project-1',
+            expect.objectContaining({
+                status: 'archived'
+            })
+        );
     });
 
     it('keeps the project screen usable when report groups are unavailable', async () => {

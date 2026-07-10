@@ -28,6 +28,8 @@ describe('CreateProjectForm', () => {
             id: 'project-1',
             name: 'Client site',
             url: 'https://example.com',
+            clientId: null,
+            archivedAt: null,
             createdAt: '2026-01-01T00:00:00.000Z'
         });
 

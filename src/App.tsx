@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { ClientsPage } from './pages/ClientsPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -18,6 +19,14 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <ProjectsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path='/clients'
+                        element={
+                            <ProtectedRoute>
+                                <ClientsPage />
                             </ProtectedRoute>
                         }
                     />
