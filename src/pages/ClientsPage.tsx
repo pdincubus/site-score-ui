@@ -92,7 +92,7 @@ function ClientsPage() {
                 search,
                 sort: 'createdAt',
                 order,
-                status
+                status: status === 'active' ? undefined : status
             });
 
             setResponse(data);

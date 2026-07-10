@@ -92,6 +92,11 @@ describe('ProjectsPage', () => {
         const projectHeading = await screen.findByRole('heading', { name: 'Crayons & Code' });
         const projectCard = projectHeading.closest('li');
 
+        expect(getProjects).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: undefined
+            })
+        );
         expect(projectCard).not.toBeNull();
         expect(within(projectCard as HTMLElement).getByText('6 reports')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('2 groups')).toBeInTheDocument();

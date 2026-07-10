@@ -122,7 +122,7 @@ function ProjectsPage() {
                 search,
                 sort,
                 order,
-                status
+                status: status === 'active' ? undefined : status
             });
 
             setResponse(data);

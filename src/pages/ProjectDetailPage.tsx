@@ -299,7 +299,7 @@ function ProjectDetailPage() {
                         sort,
                         order,
                         groupId: groupId || undefined,
-                        status
+                        status: status === 'active' ? undefined : status
                     })
                 ]);
     
