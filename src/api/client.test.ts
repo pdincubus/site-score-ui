@@ -146,6 +146,22 @@ describe('apiFetch', () => {
         await expect(apiFetch('/projects')).rejects.toThrow('Request failed');
     });
 
+    it('includes request context on failed API responses', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ error: 'Something went wrong' }), {
+                status: 500,
+                headers: { 'content-type': 'application/json' }
+            })
+        );
+
+        await expect(apiFetch('/projects')).rejects.toMatchObject({
+            name: 'ApiRequestError',
+            message: 'Something went wrong',
+            path: '/projects',
+            status: 500
+        });
+    });
+
     it('does not call unauthorized handler for non-auth errors', async () => {
         const unauthorizedSpy = vi.fn();
         setOnUnauthorized(unauthorizedSpy);

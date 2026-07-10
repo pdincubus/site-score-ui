@@ -36,6 +36,24 @@ function mockPaginatedResponse() {
     );
 }
 
+function mockProjectListItem() {
+    return {
+        id: 'project-one',
+        name: 'Project One',
+        url: 'https://example.com',
+        clientId: null,
+        archivedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        summary: {
+            reportCount: 0,
+            reportGroupCount: 0,
+            latestReportCreatedAt: null,
+            latestReportTitle: null,
+            latestScores: null
+        }
+    };
+}
+
 describe('project API helpers', () => {
     afterEach(() => {
         setOnUnauthorized(null);
@@ -58,6 +76,89 @@ describe('project API helpers', () => {
         expect(String(url)).toContain(
             '/projects?page=1&limit=50&sort=createdAt&order=desc&status=archived'
         );
+    });
+
+    it('retries the bare active project list when the initial decorated request fails', async () => {
+        const project = mockProjectListItem();
+        const fetchSpy = vi.spyOn(globalThis, 'fetch')
+            .mockResolvedValueOnce(
+                new Response(JSON.stringify({ error: 'Something went wrong' }), {
+                    status: 500,
+                    headers: { 'content-type': 'application/json' }
+                })
+            )
+            .mockResolvedValueOnce(
+                new Response(
+                    JSON.stringify({
+                        data: [project],
+                        pagination: {
+                            page: 1,
+                            limit: 10,
+                            total: 1,
+                            totalPages: 1
+                        }
+                    }),
+                    {
+                        status: 200,
+                        headers: { 'content-type': 'application/json' }
+                    }
+                )
+            );
+
+        const response = await getProjects({
+            page: 1,
+            limit: 10,
+            sort: 'createdAt',
+            order: 'desc'
+        });
+
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+        expect(String(fetchSpy.mock.calls[0]?.[0])).toContain(
+            '/projects?page=1&limit=10&sort=createdAt&order=desc'
+        );
+        expect(String(fetchSpy.mock.calls[1]?.[0])).toContain('/projects');
+        expect(String(fetchSpy.mock.calls[1]?.[0])).not.toContain('?');
+        expect(response.data).toEqual([project]);
+    });
+
+    it('does not retry project list requests when the session is rejected', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ error: 'Not authenticated' }), {
+                status: 401,
+                headers: { 'content-type': 'application/json' }
+            })
+        );
+
+        await expect(getProjects({
+            page: 1,
+            limit: 10,
+            sort: 'createdAt',
+            order: 'desc'
+        })).rejects.toThrow('Not authenticated');
+
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('normalises plain project arrays into a paginated project response', async () => {
+        const project = mockProjectListItem();
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify([project]), {
+                status: 200,
+                headers: { 'content-type': 'application/json' }
+            })
+        );
+
+        const response = await getProjects();
+
+        expect(response).toEqual({
+            data: [project],
+            pagination: {
+                page: 1,
+                limit: 1,
+                total: 1,
+                totalPages: 1
+            }
+        });
     });
 
     it('encodes project ids when building path segments', async () => {
