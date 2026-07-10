@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { ApiRequestError, apiFetch } from './client';
 import {
     buildQuery,
     encodePathSegment,
@@ -8,6 +8,7 @@ import {
 } from './query';
 import type {
     PaginatedResponse,
+    PaginationMeta,
     Project,
     ProjectListItem,
     ResourceStatus,
@@ -35,6 +36,15 @@ type GetProjectsOptions = {
     order?: SortOrder;
     status?: ResourceStatus;
 };
+
+type ProjectListApiResponse =
+    | PaginatedResponse<ProjectListItem>
+    | ProjectListItem[]
+    | {
+          data?: ProjectListItem[];
+          projects?: ProjectListItem[];
+          pagination?: Partial<PaginationMeta>;
+      };
 
 type CreateProjectInput = {
     name: string;
@@ -184,7 +194,80 @@ function importReportInsights(projectId: string, input: ReportInsightsImportInpu
     );
 }
 
-function getProjects(options: GetProjectsOptions = {}) {
+function getProjectListData(response: ProjectListApiResponse) {
+    if (Array.isArray(response)) {
+        return {
+            data: response,
+            pagination: undefined
+        };
+    }
+
+    return {
+        data:
+            Array.isArray(response.data)
+                ? response.data
+                : 'projects' in response && Array.isArray(response.projects)
+                    ? response.projects
+                    : [],
+        pagination: response.pagination
+    };
+}
+
+function normalisePagination(
+    data: ProjectListItem[],
+    pagination: Partial<PaginationMeta> | undefined,
+    options: GetProjectsOptions
+) {
+    const fallbackLimit =
+        options.limit === undefined ? Math.max(data.length, 1) : normaliseLimit(options.limit);
+    const page = pagination?.page === undefined ? normalisePage(options.page) : normalisePage(pagination.page);
+    const limit = pagination?.limit === undefined ? fallbackLimit : normaliseLimit(pagination.limit);
+    const total =
+        typeof pagination?.total === 'number' && Number.isFinite(pagination.total) && pagination.total >= 0
+            ? pagination.total
+            : data.length;
+    const totalPages =
+        typeof pagination?.totalPages === 'number' &&
+        Number.isFinite(pagination.totalPages) &&
+        pagination.totalPages >= 0
+            ? pagination.totalPages
+            : total === 0
+                ? 0
+                : Math.ceil(total / limit);
+
+    return {
+        page,
+        limit,
+        total,
+        totalPages
+    };
+}
+
+function normaliseProjectListResponse(
+    response: ProjectListApiResponse,
+    options: GetProjectsOptions
+): PaginatedResponse<ProjectListItem> {
+    const { data, pagination } = getProjectListData(response);
+
+    return {
+        data,
+        pagination: normalisePagination(data, pagination, options)
+    };
+}
+
+function isAuthError(error: unknown) {
+    return error instanceof ApiRequestError && (error.status === 401 || error.status === 403);
+}
+
+function canRetryBareProjectList(options: GetProjectsOptions) {
+    return (
+        options.status === undefined &&
+        !options.search &&
+        (options.page === undefined || normalisePage(options.page) === 1)
+    );
+}
+
+async function getProjects(options: GetProjectsOptions = {}) {
     const query = buildQuery({
         page: options.page === undefined ? undefined : normalisePage(options.page),
         limit: options.limit === undefined ? undefined : normaliseLimit(options.limit),
@@ -203,7 +286,19 @@ function getProjects(options: GetProjectsOptions = {}) {
                 : normaliseAllowedValue(options.status, STATUS_OPTIONS, 'active')
     });
 
-    return apiFetch<PaginatedResponse<ProjectListItem>>(`/projects${query}`);
+    try {
+        const response = await apiFetch<ProjectListApiResponse>(`/projects${query}`);
+
+        return normaliseProjectListResponse(response, options);
+    } catch (error) {
+        if (!canRetryBareProjectList(options) || isAuthError(error)) {
+            throw error;
+        }
+
+        const response = await apiFetch<ProjectListApiResponse>('/projects');
+
+        return normaliseProjectListResponse(response, options);
+    }
 }
 
 function getProjectById(id: string) {

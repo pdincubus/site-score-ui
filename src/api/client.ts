@@ -10,11 +10,54 @@ type ApiFetchOptions = RequestInit & {
     bodyJson?: unknown;
 };
 
+class ApiRequestError extends Error {
+    readonly status: number;
+    readonly path: string;
+    readonly data: unknown;
+
+    constructor(message: string, status: number, path: string, data: unknown) {
+        super(message);
+
+        this.name = 'ApiRequestError';
+        this.status = status;
+        this.path = path;
+        this.data = data;
+    }
+}
+
 function isMockApiEnabled() {
     return (
         NORMALIZED_API_BASE_URL === MOCK_API_PATH ||
         NORMALIZED_API_BASE_URL?.endsWith(MOCK_API_PATH)
     );
+}
+
+function getApiErrorMessage(data: unknown) {
+    if (!data || typeof data !== 'object') {
+        return 'Request failed';
+    }
+
+    if ('error' in data) {
+        const error = data.error;
+
+        if (typeof error === 'string' && error.trim()) {
+            return error;
+        }
+
+        if (error && typeof error === 'object' && 'message' in error) {
+            const message = error.message;
+
+            if (typeof message === 'string' && message.trim()) {
+                return message;
+            }
+        }
+    }
+
+    if ('message' in data && typeof data.message === 'string' && data.message.trim()) {
+        return data.message;
+    }
+
+    return 'Request failed';
 }
 
 async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
@@ -48,12 +91,7 @@ async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise
             onUnauthorizedHandler?.();
         }
 
-        const message =
-            data && typeof data === 'object' && 'error' in data
-                ? String(data.error)
-                : 'Request failed';
-
-        throw new Error(message);
+        throw new ApiRequestError(getApiErrorMessage(data), response.status, path, data);
     }
 
     return data as T;
@@ -63,4 +101,4 @@ function setOnUnauthorized(handler: (() => void) | null) {
     onUnauthorizedHandler = handler;
 }
 
-export { apiFetch, setOnUnauthorized };
+export { ApiRequestError, apiFetch, setOnUnauthorized };
