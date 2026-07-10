@@ -1,11 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { deleteReport, updateReport } from '../../api/projects';
+import { archiveReport, deleteReport, restoreReport, updateReport } from '../../api/projects';
 import { EditReportForm } from './EditReportForm';
 import type { Report, ReportGroup, ReportInsights } from '../../types/api';
 
 vi.mock('../../api/projects', () => ({
+    archiveReport: vi.fn(),
     deleteReport: vi.fn(),
+    restoreReport: vi.fn(),
     updateReport: vi.fn()
 }));
 
@@ -142,6 +144,8 @@ describe('EditReportForm', () => {
             await screen.findByText('Performance score must be a whole number from 0 to 100.')
         ).toBeInTheDocument();
         expect(updateReport).not.toHaveBeenCalled();
+        expect(archiveReport).not.toHaveBeenCalled();
+        expect(restoreReport).not.toHaveBeenCalled();
         expect(deleteReport).not.toHaveBeenCalled();
     });
 
@@ -254,5 +258,34 @@ describe('EditReportForm', () => {
             });
             expect(onUpdated).toHaveBeenCalledTimes(1);
         });
+    });
+
+    it('shows archive controls for active reports and restore controls for archived reports', () => {
+        const { rerender } = render(
+            <EditReportForm
+                report={report}
+                groups={[homepageMobileGroup]}
+                onUpdated={vi.fn()}
+                onDeleted={vi.fn()}
+                onCancel={vi.fn()}
+            />
+        );
+
+        expect(screen.getByRole('button', { name: 'Archive report' })).toBeInTheDocument();
+
+        rerender(
+            <EditReportForm
+                report={{
+                    ...report,
+                    archivedAt: '2026-07-10T09:00:00.000Z'
+                }}
+                groups={[homepageMobileGroup]}
+                onUpdated={vi.fn()}
+                onDeleted={vi.fn()}
+                onCancel={vi.fn()}
+            />
+        );
+
+        expect(screen.getByRole('button', { name: 'Restore report' })).toBeInTheDocument();
     });
 });

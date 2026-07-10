@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { deleteReport, updateReport } from '../../api/projects';
+import {
+    archiveReport,
+    deleteReport,
+    restoreReport,
+    updateReport
+} from '../../api/projects';
 import type { Report, ReportGroup } from '../../types/api';
 import { Alert } from '../feedback/Alert';
 import {
@@ -19,6 +24,8 @@ type EditReportFormProps = {
     report: Report;
     groups?: ReportGroup[];
     onUpdated: (report: Report) => void;
+    onArchived?: (reportId: string) => void;
+    onRestored?: (report: Report) => void;
     onDeleted: (reportId: string) => void;
     onCancel: () => void;
 };
@@ -27,6 +34,8 @@ function EditReportForm({
     report,
     groups = [],
     onUpdated,
+    onArchived,
+    onRestored,
     onDeleted,
     onCancel
 }: EditReportFormProps) {
@@ -43,7 +52,11 @@ function EditReportForm({
     const [agenticBrowsingScore, setAgenticBrowsingScore] = useState(String(report.agenticBrowsingScore));
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isStatusUpdating, setIsStatusUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    const isArchived = Boolean(report.archivedAt);
+    const isBusy = isSubmitting || isStatusUpdating || isDeleting;
 
     useEffect(() => {
         setGroupId(report.groupId || '');
@@ -128,6 +141,44 @@ function EditReportForm({
         }
     }
 
+    async function handleArchiveRestore() {
+        const confirmed = await confirmDialogRef.current?.open({
+            title: isArchived ? 'Restore report' : 'Archive report',
+            message: isArchived
+                ? 'This will restore the report to active report views.'
+                : 'This will move the report out of active report views. You can restore it later.',
+            confirmLabel: isArchived ? 'Restore report' : 'Archive report',
+            cancelLabel: 'Cancel'
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        setError('');
+        setIsStatusUpdating(true);
+
+        try {
+            const updatedReport = isArchived
+                ? await restoreReport(report.id)
+                : await archiveReport(report.id);
+
+            if (isArchived) {
+                onRestored?.(updatedReport);
+            } else {
+                onArchived?.(report.id);
+            }
+
+            if ((isArchived && !onRestored) || (!isArchived && !onArchived)) {
+                onUpdated(updatedReport);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update report status');
+        } finally {
+            setIsStatusUpdating(false);
+        }
+    }
+
     return (
         <>
             <form onSubmit={handleSubmit} className='form-stack'>
@@ -137,7 +188,7 @@ function EditReportForm({
                         value={groupId}
                         onChange={handleGroupChange}
                         required
-                        disabled={isSubmitting || isDeleting}
+                        disabled={isBusy}
                     >
                         <option value=''>Choose a report group</option>
                         {groups.map((group) => (
@@ -255,22 +306,37 @@ function EditReportForm({
                 ) : null}
 
                 <div className='button-row'>
-                    <button type='submit' disabled={isSubmitting || isDeleting}>
+                    <button type='submit' disabled={isBusy}>
                         {isSubmitting ? 'Saving changes...' : 'Save report'}
                     </button>
 
                     <button
                         type='button'
+                        className='button-secondary'
+                        onClick={handleArchiveRestore}
+                        disabled={isBusy}
+                    >
+                        {isStatusUpdating
+                            ? 'Updating status...'
+                            : isArchived
+                                ? 'Restore report'
+                                : 'Archive report'}
+                    </button>
+
+                    <button
+                        type='button'
+                        className='button-danger'
                         onClick={handleDelete}
-                        disabled={isSubmitting || isDeleting}
+                        disabled={isBusy}
                     >
                         {isDeleting ? 'Deleting report...' : 'Delete report'}
                     </button>
 
                     <button
                         type='button'
+                        className='button-secondary'
                         onClick={onCancel}
-                        disabled={isSubmitting || isDeleting}
+                        disabled={isBusy}
                     >
                         Cancel
                     </button>

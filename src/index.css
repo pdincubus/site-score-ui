@@ -15,7 +15,7 @@
   --color-dark-border-strong: #4d4170;
   --color-muted-on-dark: rgb(255 255 255 / 72%);
   --color-faint-on-dark: rgb(255 255 255 / 12%);
-  --color-focus: rgb(194 239 78 / 55%);
+  --color-focus: #c2ef4e;
   --shadow-panel: 0 1.5rem 4rem rgb(0 0 0 / 26%);
   --shadow-light-panel: 0 1.25rem 3rem rgb(21 15 35 / 18%);
 
@@ -90,6 +90,12 @@ a:focus-visible {
   outline-offset: 3px;
 }
 
+button:focus-visible {
+  box-shadow:
+    0 0 0 4px var(--color-primary),
+    0 0 0 7px var(--color-focus);
+}
+
 .app-shell {
   min-height: 100vh;
 }
@@ -118,6 +124,26 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.site-nav a {
+  color: var(--color-muted-on-dark);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  color: var(--color-white);
 }
 
 .site-title {
@@ -291,10 +317,19 @@ button {
   letter-spacing: 0.2px;
   text-transform: uppercase;
   box-shadow: 0 0.5rem 1.5rem rgb(21 15 35 / 22%);
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease;
 }
 
 button:hover:not(:disabled) {
   background: var(--color-cream);
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 2px rgb(21 15 35 / 14%),
+    0 0.75rem 1.75rem rgb(21 15 35 / 28%);
 }
 
 .site-header button,
@@ -311,6 +346,10 @@ button:hover:not(:disabled) {
 .page-heading > button:hover:not(:disabled),
 .form-stack > button:hover:not(:disabled) {
   background: #d8ff6d;
+  border-color: #f0ffc0;
+  box-shadow:
+    0 0 0 2px rgb(194 239 78 / 28%),
+    0 0.75rem 1.75rem rgb(21 15 35 / 28%);
 }
 
 .toolbar {
@@ -1095,6 +1134,32 @@ button:hover:not(:disabled) {
   margin-bottom: 0.75rem;
 }
 
+.item-card__actions,
+.heading-with-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.item-card__actions {
+  justify-content: flex-end;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid rgb(255 220 135 / 48%);
+  border-radius: 999px;
+  background: rgb(255 220 135 / 14%);
+  color: var(--color-white);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
 .alert {
   display: grid;
   gap: 0.35rem;
@@ -1264,7 +1329,8 @@ button:hover:not(:disabled) {
 }
 
 .modal-dialog__close:hover {
-  background: rgb(0 0 0 / 6%);
+  background: rgb(21 15 35 / 12%);
+  color: var(--color-primary);
 }
 
 .modal-dialog__body {
@@ -1277,26 +1343,70 @@ button:hover:not(:disabled) {
   color: var(--color-primary);
 }
 
-.button-row button:nth-child(2) {
-  border-color: var(--color-pink);
-  background: #ffe4ee;
+.button-danger:hover:not(:disabled) {
+  border-color: #b4144b;
+  background: #ffd0e0;
   color: var(--color-primary);
+  box-shadow:
+    0 0 0 2px rgb(180 20 75 / 18%),
+    0 0.75rem 1.75rem rgb(21 15 35 / 24%);
 }
 
-.button-row button:nth-child(3) {
+.button-danger:focus-visible {
+  outline-color: var(--color-pink);
+  box-shadow:
+    0 0 0 4px var(--color-primary),
+    0 0 0 7px var(--color-pink);
+}
+
+.button-secondary {
+  border-color: var(--color-cloud);
   background: var(--color-white);
   color: var(--color-primary);
 }
 
-.item-card .button-row button:nth-child(3) {
+.button-secondary:hover:not(:disabled) {
+  border-color: var(--color-violet-strong);
+  background: #f0eafb;
+  color: var(--color-primary);
+  box-shadow:
+    0 0 0 2px rgb(66 32 130 / 18%),
+    0 0.75rem 1.75rem rgb(21 15 35 / 24%);
+}
+
+.button-secondary:focus-visible {
+  outline-color: var(--color-lime);
+  box-shadow:
+    0 0 0 4px var(--color-primary),
+    0 0 0 7px var(--color-lime);
+}
+
+.item-card .button-secondary {
   background: rgb(255 255 255 / 10%);
   color: var(--color-white);
+}
+
+.item-card .button-secondary:hover:not(:disabled) {
+  border-color: rgb(255 255 255 / 78%);
+  background: rgb(255 255 255 / 22%);
+  color: var(--color-white);
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 18%),
+    0 0.75rem 1.75rem rgb(0 0 0 / 20%);
 }
 
 .confirm-dialog__actions button,
 .modal-dialog button,
 .card--narrow button {
   box-shadow: none;
+}
+
+.confirm-dialog__actions button:focus-visible,
+.modal-dialog button:focus-visible,
+.card--narrow button:focus-visible {
+  box-shadow:
+    0 0 0 4px var(--color-primary),
+    0 0 0 7px var(--color-focus);
 }
 
 .confirm-dialog__actions button:last-child,
@@ -1314,8 +1424,54 @@ button:hover:not(:disabled) {
 .modal-dialog .form-stack > button:hover:not(:disabled),
 .page-speed-import button:hover:not(:disabled),
 .card--narrow .form-stack > button:hover:not(:disabled) {
-  background: #241837;
+  border-color: var(--color-violet-strong);
+  background: var(--color-violet-strong);
   color: var(--color-white);
+  box-shadow:
+    0 0 0 2px rgb(66 32 130 / 22%),
+    0 0.75rem 1.75rem rgb(21 15 35 / 26%);
+}
+
+.confirm-dialog__actions .button-danger,
+.modal-dialog .button-danger {
+  border-color: var(--color-pink);
+  background: #ffe4ee;
+  color: var(--color-primary);
+}
+
+.confirm-dialog__actions .button-danger:hover:not(:disabled),
+.modal-dialog .button-danger:hover:not(:disabled) {
+  border-color: #b4144b;
+  background: #ffd0e0;
+  color: var(--color-primary);
+  box-shadow:
+    0 0 0 2px rgb(180 20 75 / 18%),
+    0 0.75rem 1.75rem rgb(21 15 35 / 24%);
+}
+
+.confirm-dialog__actions .button-danger:focus-visible,
+.modal-dialog .button-danger:focus-visible {
+  outline-color: var(--color-pink);
+  box-shadow:
+    0 0 0 4px var(--color-primary),
+    0 0 0 7px var(--color-pink);
+}
+
+.confirm-dialog__actions .button-secondary,
+.modal-dialog .button-secondary {
+  border-color: var(--color-cloud);
+  background: var(--color-white);
+  color: var(--color-primary);
+}
+
+.confirm-dialog__actions .button-secondary:hover:not(:disabled),
+.modal-dialog .button-secondary:hover:not(:disabled) {
+  border-color: var(--color-violet-strong);
+  background: #f0eafb;
+  color: var(--color-primary);
+  box-shadow:
+    0 0 0 2px rgb(66 32 130 / 18%),
+    0 0.75rem 1.75rem rgb(21 15 35 / 24%);
 }
 
 @keyframes spin {

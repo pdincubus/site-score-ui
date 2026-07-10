@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
     ORDER_OPTIONS,
     REPORT_SORT_OPTIONS,
+    STATUS_OPTIONS,
     getProjectById,
     getProjectReportGroups,
     getProjectReportGroupTrends,
@@ -20,7 +21,14 @@ import { ReportInsightsSummary } from '../components/reports/ReportInsightsSumma
 import { SCORE_ITEMS, type ScoreKey } from '../components/reports/reportScores';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import type { PaginatedResponse, Project, Report, ReportGroup, ReportGroupTrend } from '../types/api';
+import type {
+    PaginatedResponse,
+    Project,
+    Report,
+    ReportGroup,
+    ReportGroupTrend,
+    ResourceStatus
+} from '../types/api';
 
 type ReportSection = {
     key: string;
@@ -209,6 +217,26 @@ function getScoreDeltaClass(delta: number) {
     return 'score-delta score-delta--unchanged';
 }
 
+function getEmptyReportsTitle(status: ResourceStatus) {
+    if (status === 'archived') {
+        return 'No archived reports found';
+    }
+
+    if (status === 'all') {
+        return 'No reports found';
+    }
+
+    return 'No active reports found';
+}
+
+function getEmptyReportsMessage(status: ResourceStatus) {
+    if (status === 'archived') {
+        return 'Archived reports will appear here when you archive them.';
+    }
+
+    return 'Create a report to start reviewing this project.';
+}
+
 function ProjectDetailPage() {
     const { id = '' } = useParams();
     const navigate = useNavigate();
@@ -234,6 +262,7 @@ function ProjectDetailPage() {
     const groupId = searchParams.get('groupId') || '';
     const sort = normaliseAllowedValue(searchParams.get('sort'), REPORT_SORT_OPTIONS, 'createdAt');
     const order = normaliseAllowedValue(searchParams.get('order'), ORDER_OPTIONS, 'desc');
+    const status = normaliseAllowedValue(searchParams.get('status'), STATUS_OPTIONS, 'active');
 
     useDocumentTitle(project ? `${project.name} | Site Score UI` : 'Project | Site Score UI');
 
@@ -269,7 +298,8 @@ function ProjectDetailPage() {
                         search,
                         sort,
                         order,
-                        groupId: groupId || undefined
+                        groupId: groupId || undefined,
+                        status
                     })
                 ]);
     
@@ -286,13 +316,17 @@ function ProjectDetailPage() {
         if (id) {
             void loadProjectData();
         }
-    }, [id, page, limit, search, sort, order, groupId, reloadKey]);
+    }, [id, page, limit, search, sort, order, groupId, status, reloadKey]);
 
     useEffect(() => {
         let isCurrentRequest = true;
 
         async function loadReportGroupTrends() {
             setReportGroupTrends([]);
+
+            if (status === 'archived') {
+                return;
+            }
 
             try {
                 const trendData = await getProjectReportGroupTrends(id, {
@@ -316,7 +350,7 @@ function ProjectDetailPage() {
         return () => {
             isCurrentRequest = false;
         };
-    }, [id, groupId, reloadKey]);
+    }, [id, groupId, status, reloadKey]);
 
     useEffect(() => {
         setSearchInput(search);
@@ -335,7 +369,7 @@ function ProjectDetailPage() {
 
     useEffect(() => {
         setSuccessMessage('');
-    }, [search, sort, order, groupId, page]);
+    }, [search, sort, order, groupId, status, page]);
 
     function setPage(nextPage: number) {
         const params = new URLSearchParams(searchParams);
@@ -351,6 +385,26 @@ function ProjectDetailPage() {
 
     function handleProjectDeleted() {
         navigate('/projects');
+    }
+
+    function removeReportFromCurrentList(reportId: string) {
+        setReports((current) => {
+            if (!current) {
+                return current;
+            }
+
+            const nextData = current.data.filter((report) => report.id !== reportId);
+            const nextTotal = Math.max(current.pagination.total - 1, 0);
+
+            return {
+                data: nextData,
+                pagination: {
+                    ...current.pagination,
+                    total: nextTotal,
+                    totalPages: nextTotal === 0 ? 0 : Math.ceil(nextTotal / current.pagination.limit)
+                }
+            };
+        });
     }
 
     function handleReportCreated() {
@@ -389,32 +443,36 @@ function ProjectDetailPage() {
     }
 
     function handleReportDeleted(reportId: string) {
-        setReports((current) => {
-            if (!current) {
-                return current;
-            }
-
-            const nextData = current.data.filter((report) => report.id !== reportId);
-            const nextTotal = Math.max(current.pagination.total - 1, 0);
-
-            return {
-                data: nextData,
-                pagination: {
-                    ...current.pagination,
-                    total: nextTotal,
-                    totalPages: nextTotal === 0 ? 0 : Math.ceil(nextTotal / current.pagination.limit)
-                }
-            };
-        });
+        removeReportFromCurrentList(reportId);
 
         setEditingReportId(null);
         setSuccessMessage('Report deleted successfully');
         setReloadKey((value) => value + 1);
     }
 
+    function handleReportArchived(reportId: string) {
+        removeReportFromCurrentList(reportId);
+        setEditingReportId(null);
+        setSuccessMessage('Report archived successfully');
+        setReloadKey((value) => value + 1);
+    }
+
+    function handleReportRestored(report: Report) {
+        if (status === 'all') {
+            handleReportUpdated(report);
+            return;
+        }
+
+        removeReportFromCurrentList(report.id);
+        setEditingReportId(null);
+        setSuccessMessage('Report restored successfully');
+        setReloadKey((value) => value + 1);
+    }
+
     const reportComparisons = reports ? getReportComparisonMap(reports.data) : new Map();
     const previousReports = reports ? getPreviousReportMap(reports.data) : new Map();
     const reportTrends = getTrendMap(reportGroupTrends);
+    const shouldShowReportTrends = status !== 'archived';
 
     function renderReportCard(report: Report, headingLevel: 3 | 4) {
         const comparison = reportComparisons.get(report.id);
@@ -430,6 +488,8 @@ function ProjectDetailPage() {
                             report={report}
                             groups={reportGroups}
                             onUpdated={handleReportUpdated}
+                            onArchived={handleReportArchived}
+                            onRestored={handleReportRestored}
                             onDeleted={handleReportDeleted}
                             onCancel={() => setEditingReportId(null)}
                         />
@@ -438,12 +498,17 @@ function ProjectDetailPage() {
                     <>
                         <div className='item-card__header'>
                             <ReportHeading>{report.title}</ReportHeading>
-                            <button
-                                type='button'
-                                onClick={() => setEditingReportId(report.id)}
-                            >
-                                Edit
-                            </button>
+                            <div className='item-card__actions'>
+                                {report.archivedAt ? (
+                                    <span className='status-pill'>Archived</span>
+                                ) : null}
+                                <button
+                                    type='button'
+                                    onClick={() => setEditingReportId(report.id)}
+                                >
+                                    Edit
+                                </button>
+                            </div>
                         </div>
 
                         <dl className='report-card__meta'>
@@ -518,7 +583,12 @@ function ProjectDetailPage() {
                 <>
                     <div className='page-heading page-heading--with-actions'>
                         <div>
-                            <h1>{project.name}</h1>
+                            <div className='heading-with-status'>
+                                <h1>{project.name}</h1>
+                                {project.archivedAt ? (
+                                    <span className='status-pill'>Archived</span>
+                                ) : null}
+                            </div>
                             <p>{project.url}</p>
                         </div>
                         <div className='page-heading__actions'>
@@ -605,6 +675,23 @@ function ProjectDetailPage() {
                             </label>
 
                             <label>
+                                <span>Status</span>
+                                <select
+                                    value={status}
+                                    onChange={(event) =>
+                                        updateQuery({
+                                            status: event.target.value === 'active' ? '' : event.target.value,
+                                            page: '1'
+                                        })
+                                    }
+                                >
+                                    <option value='active'>Active reports</option>
+                                    <option value='archived'>Archived reports</option>
+                                    <option value='all'>All reports</option>
+                                </select>
+                            </label>
+
+                            <label>
                                 <span>Sort</span>
                                 <select
                                     value={sort}
@@ -646,7 +733,9 @@ function ProjectDetailPage() {
                                         return (
                                             <section key={section.key} className='report-group-section'>
                                                 <h3>{section.name}</h3>
-                                                {trend ? <ReportGroupTrendChart trend={trend} /> : null}
+                                                {shouldShowReportTrends && trend ? (
+                                                    <ReportGroupTrendChart trend={trend} />
+                                                ) : null}
                                                 <ul className='item-list'>
                                                     {section.reports.map((report) =>
                                                         renderReportCard(report, 4)
@@ -680,8 +769,8 @@ function ProjectDetailPage() {
                                 </div>
                             </>
                         ) : (
-                            <Alert variant='info' title='No reports found'>
-                                Create a report to start reviewing this project.
+                            <Alert variant='info' title={getEmptyReportsTitle(status)}>
+                                {getEmptyReportsMessage(status)}
                             </Alert>
                         )}
                     </div>
