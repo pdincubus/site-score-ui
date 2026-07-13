@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { getProjects } from '../api/projects';
+import { getClients } from '../api/clients';
 import { ProjectsPage } from './ProjectsPage';
 import type { PaginatedResponse, ProjectListItem } from '../types/api';
 
@@ -10,6 +11,10 @@ vi.mock('../api/projects', () => ({
     PROJECT_SORT_OPTIONS: ['createdAt', 'name'],
     STATUS_OPTIONS: ['active', 'archived', 'all'],
     getProjects: vi.fn()
+}));
+
+vi.mock('../api/clients', () => ({
+    getClients: vi.fn()
 }));
 
 vi.mock('../hooks/useDocumentTitle', () => ({
@@ -44,6 +49,22 @@ describe('ProjectsPage', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(getClients).mockResolvedValue({
+            data: [
+                {
+                    id: 'client-1',
+                    name: 'Example client',
+                    archivedAt: null,
+                    createdAt: '2026-07-01T08:30:00.000Z'
+                }
+            ],
+            pagination: {
+                page: 1,
+                limit: 50,
+                total: 1,
+                totalPages: 1
+            }
+        });
     });
 
     it('shows a friendly project loading state while the API responds', () => {
@@ -181,5 +202,31 @@ describe('ProjectsPage', () => {
         );
         expect(projectCard).not.toBeNull();
         expect(within(projectCard as HTMLElement).getByText('Archived')).toBeInTheDocument();
+    });
+
+    it('filters the global project list by client using the URL query', async () => {
+        vi.mocked(getProjects).mockResolvedValue(projectResponse([]));
+
+        renderProjectsPage('/projects?clientId=client-1');
+
+        expect(await screen.findByRole('option', { name: 'Example client' })).toBeInTheDocument();
+        expect(screen.getByLabelText('Client')).toHaveValue('client-1');
+        expect(getProjects).toHaveBeenCalledWith(
+            expect.objectContaining({
+                clientId: 'client-1'
+            })
+        );
+
+        fireEvent.change(screen.getByLabelText('Client'), {
+            target: { value: 'unassigned' }
+        });
+
+        await waitFor(() => {
+            expect(getProjects).toHaveBeenLastCalledWith(
+                expect.objectContaining({
+                    clientId: 'unassigned'
+                })
+            );
+        });
     });
 });

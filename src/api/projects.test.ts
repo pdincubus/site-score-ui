@@ -139,6 +139,24 @@ describe('project API helpers', () => {
         expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('includes client filters and does not retry a filtered project request', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ error: 'Something went wrong' }), {
+                status: 500,
+                headers: { 'content-type': 'application/json' }
+            })
+        );
+
+        await expect(getProjects({ clientId: 'unassigned' })).rejects.toThrow(
+            'Something went wrong'
+        );
+
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect(String(fetchSpy.mock.calls[0]?.[0])).toContain(
+            '/projects?clientId=unassigned'
+        );
+    });
+
     it('normalises plain project arrays into a paginated project response', async () => {
         const project = mockProjectListItem();
         vi.spyOn(globalThis, 'fetch').mockResolvedValue(

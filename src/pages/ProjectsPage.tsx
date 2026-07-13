@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { getClients } from '../api/clients';
 import { ORDER_OPTIONS, PROJECT_SORT_OPTIONS, STATUS_OPTIONS, getProjects } from '../api/projects';
 import { normaliseAllowedValue, normaliseLimit, normalisePage } from '../api/query';
 import { Alert } from '../components/feedback/Alert';
@@ -94,6 +95,8 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editClientDialogOpen, setEditClientDialogOpen] = useState(false);
     const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
+    const [clientOptions, setClientOptions] = useState<Client[]>([]);
+    const [clientOptionsError, setClientOptionsError] = useState('');
 
     const debouncedSearch = useDebouncedValue(searchInput, 300);
     const page = normalisePage(searchParams.get('page'));
@@ -102,6 +105,7 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
     const sort = normaliseAllowedValue(searchParams.get('sort'), PROJECT_SORT_OPTIONS, 'createdAt');
     const order = normaliseAllowedValue(searchParams.get('order'), ORDER_OPTIONS, 'desc');
     const status = normaliseAllowedValue(searchParams.get('status'), STATUS_OPTIONS, 'active');
+    const clientId = client?.id || searchParams.get('clientId') || '';
 
     const updateQuery = useCallback(
         (next: Record<string, string>) => {
@@ -132,7 +136,7 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
                 sort,
                 order,
                 status: status === 'active' ? undefined : status,
-                clientId: client?.id
+                clientId: clientId || undefined
             });
 
             setResponse(data);
@@ -141,7 +145,43 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
         } finally {
             setIsLoading(false);
         }
-    }, [page, limit, search, sort, order, status, client]);
+    }, [page, limit, search, sort, order, status, clientId]);
+
+    useEffect(() => {
+        if (client) {
+            return;
+        }
+
+        let active = true;
+
+        async function loadClientOptions() {
+            setClientOptionsError('');
+
+            try {
+                const clients = await getClients({
+                    limit: 50,
+                    sort: 'name',
+                    order: 'asc'
+                });
+
+                if (active) {
+                    setClientOptions(clients.data);
+                }
+            } catch (err) {
+                if (active) {
+                    setClientOptionsError(
+                        err instanceof Error ? err.message : 'Failed to load clients'
+                    );
+                }
+            }
+        }
+
+        void loadClientOptions();
+
+        return () => {
+            active = false;
+        };
+    }, [client]);
 
     useEffect(() => {
         setSearchInput(search);
@@ -164,7 +204,7 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
 
     useEffect(() => {
         setSuccessMessage('');
-    }, [search, sort, order, status, page]);
+    }, [search, sort, order, status, clientId, page]);
 
     function handleProjectCreated(project: Project) {
         setSuccessMessage(`Project created: ${project.name}`);
@@ -259,6 +299,29 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
                         />
                     </label>
 
+                    {!client ? (
+                        <label>
+                            <span>Client</span>
+                            <select
+                                value={clientId}
+                                onChange={(event) =>
+                                    updateQuery({
+                                        clientId: event.target.value,
+                                        page: '1'
+                                    })
+                                }
+                            >
+                                <option value=''>All clients</option>
+                                <option value='unassigned'>Unassigned</option>
+                                {clientOptions.map((clientOption) => (
+                                    <option key={clientOption.id} value={clientOption.id}>
+                                        {clientOption.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    ) : null}
+
                     <label>
                         <span>Sort</span>
                         <select
@@ -308,6 +371,12 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
                         </select>
                     </label>
                 </div>
+
+                {clientOptionsError ? (
+                    <Alert variant='error' title='Could not load client filters'>
+                        {clientOptionsError}
+                    </Alert>
+                ) : null}
 
                 {isLoading ? (
                     <Loading
