@@ -9,7 +9,7 @@ import { Loading } from '../components/feedback/Loading';
 import { ModalDialog } from '../components/feedback/ModalDialog';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import type { Client, PaginatedResponse, ResourceStatus } from '../types/api';
+import type { Client, ClientListItem, PaginatedResponse, ResourceStatus } from '../types/api';
 
 function formatClientDate(value: string) {
     const date = new Date(value);
@@ -22,6 +22,10 @@ function formatClientDate(value: string) {
         dateStyle: 'medium',
         timeStyle: 'short'
     }).format(date);
+}
+
+function formatClientCount(value: number, label: string) {
+    return `${value} ${label}${value === 1 ? '' : 's'}`;
 }
 
 function getEmptyClientsTitle(status: ResourceStatus) {
@@ -48,7 +52,7 @@ function ClientsPage() {
     useDocumentTitle('Clients | Site Score UI');
 
     const [searchParams, setSearchParams] = useSearchParams();
-    const [response, setResponse] = useState<PaginatedResponse<Client> | null>(null);
+    const [response, setResponse] = useState<PaginatedResponse<ClientListItem> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
@@ -285,18 +289,14 @@ function ClientsPage() {
                                             </div>
                                         </div>
 
-                                        <dl className='project-summary'>
-                                            <div>
-                                                <dt>Created</dt>
-                                                <dd>{formatClientDate(client.createdAt)}</dd>
-                                            </div>
+                                        <ul className='client-meta' aria-label={`${client.name} details`}>
+                                            <li>Created {formatClientDate(client.createdAt)}</li>
                                             {client.archivedAt ? (
-                                                <div>
-                                                    <dt>Archived</dt>
-                                                    <dd>{formatClientDate(client.archivedAt)}</dd>
-                                                </div>
+                                                <li>Archived {formatClientDate(client.archivedAt)}</li>
                                             ) : null}
-                                        </dl>
+                                            <li>{formatClientCount(client.summary.projectCount, 'project')}</li>
+                                            <li>{formatClientCount(client.summary.reportCount, 'result')}</li>
+                                        </ul>
                                     </li>
                                 ))}
                             </ul>

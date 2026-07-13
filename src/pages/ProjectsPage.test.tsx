@@ -55,7 +55,11 @@ describe('ProjectsPage', () => {
                     id: 'client-1',
                     name: 'Example client',
                     archivedAt: null,
-                    createdAt: '2026-07-01T08:30:00.000Z'
+                    createdAt: '2026-07-01T08:30:00.000Z',
+                    summary: {
+                        projectCount: 0,
+                        reportCount: 0
+                    }
                 }
             ],
             pagination: {

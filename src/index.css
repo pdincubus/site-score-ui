@@ -246,9 +246,8 @@ button:focus-visible {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: 1rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
 }
 
 .card-heading {
@@ -572,6 +571,21 @@ button:hover:not(:disabled) {
 
 .item-card > p {
   color: var(--color-muted-on-dark);
+}
+
+.client-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-muted-on-dark);
+  font-size: 0.95rem;
+}
+
+.client-meta li {
+  min-width: 0;
 }
 
 .project-card__url {

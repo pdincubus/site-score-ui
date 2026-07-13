@@ -3,7 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { getClients } from '../api/clients';
 import { ClientsPage } from './ClientsPage';
-import type { Client, PaginatedResponse } from '../types/api';
+import type { ClientListItem, PaginatedResponse } from '../types/api';
 
 vi.mock('../api/clients', () => ({
     ORDER_OPTIONS: ['asc', 'desc'],
@@ -15,7 +15,7 @@ vi.mock('../hooks/useDocumentTitle', () => ({
     useDocumentTitle: vi.fn()
 }));
 
-function clientResponse(data: Client[]): PaginatedResponse<Client> {
+function clientResponse(data: ClientListItem[]): PaginatedResponse<ClientListItem> {
     return {
         data,
         pagination: {
@@ -65,7 +65,11 @@ describe('ClientsPage', () => {
                     id: 'client-archived',
                     name: 'Archived client',
                     archivedAt: '2026-07-09T08:30:00.000Z',
-                    createdAt: '2026-07-01T08:30:00.000Z'
+                    createdAt: '2026-07-01T08:30:00.000Z',
+                    summary: {
+                        projectCount: 0,
+                        reportCount: 0
+                    }
                 }
             ])
         );
@@ -86,5 +90,33 @@ describe('ClientsPage', () => {
             '/clients/client-archived'
         );
         expect(within(clientCard as HTMLElement).getAllByText('Archived').length).toBeGreaterThan(0);
+    });
+
+    it('shows client metadata and counts without a nested summary card', async () => {
+        vi.mocked(getClients).mockResolvedValue(
+            clientResponse([
+                {
+                    id: 'client-useful',
+                    name: 'Useful client',
+                    archivedAt: null,
+                    createdAt: '2026-07-13T09:00:00.000Z',
+                    summary: {
+                        projectCount: 1,
+                        reportCount: 2
+                    }
+                }
+            ])
+        );
+
+        renderClientsPage();
+
+        const clientHeading = await screen.findByRole('heading', { name: 'Useful client' });
+        const clientCard = clientHeading.closest('li');
+
+        expect(clientCard).not.toBeNull();
+        expect(within(clientCard as HTMLElement).getByText(/Created 13 Jul 2026/)).toBeInTheDocument();
+        expect(within(clientCard as HTMLElement).getByText('1 project')).toBeInTheDocument();
+        expect(within(clientCard as HTMLElement).getByText('2 results')).toBeInTheDocument();
+        expect(clientCard?.querySelector('.project-summary')).toBeNull();
     });
 });

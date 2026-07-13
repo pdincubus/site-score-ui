@@ -6,7 +6,7 @@ import {
     normaliseLimit,
     normalisePage
 } from './query';
-import type { Client, PaginatedResponse, ResourceStatus } from '../types/api';
+import type { Client, ClientListItem, PaginatedResponse, ResourceStatus } from '../types/api';
 
 const CLIENT_SORT_OPTIONS = ['createdAt', 'name'] as const;
 const ORDER_OPTIONS = ['asc', 'desc'] as const;
@@ -51,7 +51,7 @@ function getClients(options: GetClientsOptions = {}) {
                 : normaliseAllowedValue(options.status, STATUS_OPTIONS, 'active')
     });
 
-    return apiFetch<PaginatedResponse<Client>>(`/clients${query}`);
+    return apiFetch<PaginatedResponse<ClientListItem>>(`/clients${query}`);
 }
 
 function createClient(input: CreateClientInput) {

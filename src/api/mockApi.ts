@@ -1,5 +1,6 @@
 import type {
     Client,
+    ClientListItem,
     Dashboard,
     PageSpeedStrategy,
     PaginatedResponse,
@@ -974,6 +975,22 @@ function getProjectSummary(projectId: string): ProjectSummary {
     };
 }
 
+function toClientListItem(client: Client): ClientListItem {
+    const clientProjects = projects.filter((project) => project.clientId === client.id);
+    const clientProjectIds = new Set(clientProjects.map((project) => project.id));
+    const clientReports = reports.filter(
+        (report) => clientProjectIds.has(report.projectId) && !report.archivedAt
+    );
+
+    return {
+        ...client,
+        summary: {
+            projectCount: clientProjects.length,
+            reportCount: clientReports.length
+        }
+    };
+}
+
 function toProjectListItem(project: Project): ProjectListItem {
     return {
         ...project,
@@ -1234,7 +1251,7 @@ async function mockApiFetch<T>(path: string, options: MockApiFetchOptions = {}):
             url.searchParams.get('order')
         );
 
-        return clone(paginate(sortedClients, page, limit)) as T;
+        return clone(paginate(sortedClients.map(toClientListItem), page, limit)) as T;
     }
 
     if (method === 'POST' && url.pathname === '/clients') {

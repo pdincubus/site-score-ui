@@ -21,6 +21,15 @@ export type Client = {
     createdAt: string;
 };
 
+export type ClientSummary = {
+    projectCount: number;
+    reportCount: number;
+};
+
+export type ClientListItem = Client & {
+    summary: ClientSummary;
+};
+
 export type DashboardClient = Pick<Client, 'id' | 'name' | 'createdAt'>;
 
 export type DashboardProject = Pick<Project, 'id' | 'name' | 'clientId' | 'createdAt'> & {

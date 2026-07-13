@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mockApiFetch } from './mockApi';
-import type { Dashboard, PaginatedResponse, Project } from '../types/api';
+import type { ClientListItem, Dashboard, PaginatedResponse, Project } from '../types/api';
 
 describe('mockApiFetch', () => {
     it('provides recent shared workspace activity for the dashboard', async () => {
@@ -15,6 +15,16 @@ describe('mockApiFetch', () => {
                 projectName: expect.any(String)
             })
         );
+    });
+
+    it('adds client summary stats derived from mock projects and reports', async () => {
+        const response = await mockApiFetch<PaginatedResponse<ClientListItem>>('/clients');
+        const crayonsClient = response.data.find((client) => client.id === 'client-crayons-code');
+
+        expect(crayonsClient?.summary).toEqual({
+            projectCount: 1,
+            reportCount: 6
+        });
     });
 
     it('filters mock projects by assigned or unassigned client', async () => {
