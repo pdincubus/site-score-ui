@@ -409,6 +409,18 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
 
                                     return (
                                         <li key={project.id} className='item-card'>
+                                            <p className='project-card__client'>
+                                                {project.clientId ? (
+                                                    <>
+                                                        Client:{' '}
+                                                        <Link to={`/clients/${project.clientId}`}>
+                                                            {project.clientName || 'Unknown client'}
+                                                        </Link>
+                                                    </>
+                                                ) : (
+                                                    'Unassigned client'
+                                                )}
+                                            </p>
                                             <div className='item-card__header'>
                                                 <h2>
                                                     <Link to={`/projects/${project.id}`}>

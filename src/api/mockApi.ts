@@ -994,6 +994,7 @@ function toClientListItem(client: Client): ClientListItem {
 function toProjectListItem(project: Project): ProjectListItem {
     return {
         ...project,
+        clientName: clients.find((client) => client.id === project.clientId)?.name ?? null,
         summary: getProjectSummary(project.id)
     };
 }

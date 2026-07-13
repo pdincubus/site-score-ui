@@ -594,6 +594,17 @@ button:hover:not(:disabled) {
   font-size: 0.9rem;
 }
 
+.project-card__client {
+  margin: 0 0 0.45rem;
+  color: var(--color-muted-on-dark);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.project-card__client a {
+  color: var(--color-white);
+}
+
 .project-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8.75rem, 1fr));

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { mockApiFetch } from './mockApi';
-import type { ClientListItem, Dashboard, PaginatedResponse, Project } from '../types/api';
+import type {
+    ClientListItem,
+    Dashboard,
+    PaginatedResponse,
+    Project,
+    ProjectListItem
+} from '../types/api';
 
 describe('mockApiFetch', () => {
     it('provides recent shared workspace activity for the dashboard', async () => {
@@ -37,6 +43,15 @@ describe('mockApiFetch', () => {
 
         expect(assigned.data.every((project) => project.clientId === 'client-crayons-code')).toBe(true);
         expect(unassigned.data.every((project) => project.clientId === null)).toBe(true);
+    });
+
+    it('adds client names to mock project list items', async () => {
+        const response = await mockApiFetch<PaginatedResponse<ProjectListItem>>('/projects');
+        const crayonsProject = response.data.find((project) => project.id === 'project-crayons-code');
+        const unassignedProject = response.data.find((project) => project.id === 'project-fresh-start');
+
+        expect(crayonsProject?.clientName).toBe('Crayons & Code');
+        expect(unassignedProject?.clientName).toBeNull();
     });
 
     it('adds project summary stats derived from mock report and group data', async () => {

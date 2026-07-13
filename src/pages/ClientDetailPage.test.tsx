@@ -46,6 +46,7 @@ describe('ClientDetailPage', () => {
                     name: 'Marketing site',
                     url: 'https://example.com',
                     clientId: 'client-1',
+                    clientName: 'Crayons & Code',
                     archivedAt: null,
                     createdAt: '2026-07-13T10:00:00.000Z',
                     summary: {

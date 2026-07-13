@@ -71,6 +71,7 @@ export type ProjectSummary = {
 };
 
 export type ProjectListItem = Project & {
+    clientName: string | null;
     summary: ProjectSummary;
 };
 

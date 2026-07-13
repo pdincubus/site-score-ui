@@ -93,6 +93,7 @@ describe('ProjectsPage', () => {
                     name: 'Crayons & Code',
                     url: 'https://crayonsandcode.co.uk/',
                     clientId: 'client-1',
+                    clientName: 'Example client',
                     archivedAt: null,
                     createdAt: '2026-07-01T08:30:00.000Z',
                     summary: {
@@ -123,6 +124,10 @@ describe('ProjectsPage', () => {
             })
         );
         expect(projectCard).not.toBeNull();
+        expect(within(projectCard as HTMLElement).getByRole('link', { name: 'Example client' })).toHaveAttribute(
+            'href',
+            '/clients/client-1'
+        );
         expect(within(projectCard as HTMLElement).getByText('6 results')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('2 groups')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('Latest result')).toBeInTheDocument();
@@ -146,6 +151,7 @@ describe('ProjectsPage', () => {
                     name: 'Fresh Start Studio',
                     url: 'https://fresh-start.example/',
                     clientId: null,
+                    clientName: null,
                     archivedAt: null,
                     createdAt: '2026-07-08T08:30:00.000Z',
                     summary: {
@@ -165,6 +171,7 @@ describe('ProjectsPage', () => {
         const projectCard = projectHeading.closest('li');
 
         expect(projectCard).not.toBeNull();
+        expect(within(projectCard as HTMLElement).getByText('Unassigned client')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('0 results')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('0 groups')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('No results yet')).toBeInTheDocument();
@@ -181,6 +188,7 @@ describe('ProjectsPage', () => {
                     name: 'Archived site',
                     url: 'https://archived.example/',
                     clientId: null,
+                    clientName: null,
                     archivedAt: '2026-07-09T08:30:00.000Z',
                     createdAt: '2026-07-01T08:30:00.000Z',
                     summary: {
