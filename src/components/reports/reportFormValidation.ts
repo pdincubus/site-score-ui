@@ -213,35 +213,35 @@ function validateReportForm(input: ReportFormInput): ReportFormValidationResult 
     if (input.groupId !== undefined && !groupId) {
         return {
             data: null,
-            error: 'Choose a report group.'
+            error: 'Choose a result group.'
         };
     }
 
     if (!title) {
         return {
             data: null,
-            error: 'Enter a report title.'
+            error: 'Enter a result title.'
         };
     }
 
     if (title.length > REPORT_TITLE_MAX_LENGTH) {
         return {
             data: null,
-            error: `Report title must be ${REPORT_TITLE_MAX_LENGTH} characters or fewer.`
+            error: `Result title must be ${REPORT_TITLE_MAX_LENGTH} characters or fewer.`
         };
     }
 
     if (!summary) {
         return {
             data: null,
-            error: 'Enter a report summary.'
+            error: 'Enter a result summary.'
         };
     }
 
     if (summary.length > REPORT_SUMMARY_MAX_LENGTH) {
         return {
             data: null,
-            error: `Report summary must be ${REPORT_SUMMARY_MAX_LENGTH} characters or fewer.`
+            error: `Result summary must be ${REPORT_SUMMARY_MAX_LENGTH} characters or fewer.`
         };
     }
 

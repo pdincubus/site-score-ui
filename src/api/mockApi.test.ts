@@ -1,8 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import { mockApiFetch } from './mockApi';
-import type { PaginatedResponse, Project } from '../types/api';
+import type { Dashboard, PaginatedResponse, Project } from '../types/api';
 
 describe('mockApiFetch', () => {
+    it('provides recent shared workspace activity for the dashboard', async () => {
+        const dashboard = await mockApiFetch<Dashboard>('/dashboard');
+
+        expect(dashboard.clients.length).toBeGreaterThan(0);
+        expect(dashboard.projects.length).toBeGreaterThan(0);
+        expect(dashboard.results.length).toBeGreaterThan(0);
+        expect(dashboard.projects[0]).toHaveProperty('clientName');
+        expect(dashboard.results[0]).toEqual(
+            expect.objectContaining({
+                projectName: expect.any(String)
+            })
+        );
+    });
+
+    it('filters mock projects by assigned or unassigned client', async () => {
+        const assigned = await mockApiFetch<PaginatedResponse<Project>>(
+            '/projects?clientId=client-crayons-code'
+        );
+        const unassigned = await mockApiFetch<PaginatedResponse<Project>>(
+            '/projects?clientId=unassigned'
+        );
+
+        expect(assigned.data.every((project) => project.clientId === 'client-crayons-code')).toBe(true);
+        expect(unassigned.data.every((project) => project.clientId === null)).toBe(true);
+    });
+
     it('adds project summary stats derived from mock report and group data', async () => {
         const response = await mockApiFetch<PaginatedResponse<Project>>(
             '/projects?search=Crayons&page=1&limit=10'

@@ -76,7 +76,7 @@ describe('ReportGroupTrendChart', () => {
             name: 'Score trend data for Homepage mobile'
         });
 
-        expect(within(table).getByRole('columnheader', { name: 'Report' })).toBeInTheDocument();
+        expect(within(table).getByRole('columnheader', { name: 'Result' })).toBeInTheDocument();
         expect(within(table).getByRole('columnheader', { name: 'Performance' })).toBeInTheDocument();
         expect(within(table).getByRole('row', { name: /July snapshot/ })).toHaveTextContent('75');
     });
@@ -92,7 +92,7 @@ describe('ReportGroupTrendChart', () => {
         );
 
         expect(screen.getByRole('status')).toHaveTextContent(
-            'Add another report to see a trend.'
+            'Add another result to see a trend.'
         );
         expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { getClientById } from '../api/clients';
 import {
     ORDER_OPTIONS,
     REPORT_SORT_OPTIONS,
@@ -22,6 +23,7 @@ import { SCORE_ITEMS, type ScoreKey } from '../components/reports/reportScores';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type {
+    Client,
     PaginatedResponse,
     Project,
     Report,
@@ -195,14 +197,14 @@ function formatScoreDeltaLabel(label: string, delta: number) {
     const pointLabel = absoluteDelta === 1 ? 'point' : 'points';
 
     if (delta > 0) {
-        return `${label} improved by ${absoluteDelta} ${pointLabel} from the previous report.`;
+        return `${label} improved by ${absoluteDelta} ${pointLabel} from the previous result.`;
     }
 
     if (delta < 0) {
-        return `${label} declined by ${absoluteDelta} ${pointLabel} from the previous report.`;
+        return `${label} declined by ${absoluteDelta} ${pointLabel} from the previous result.`;
     }
 
-    return `${label} did not change from the previous report.`;
+    return `${label} did not change from the previous result.`;
 }
 
 function getScoreDeltaClass(delta: number) {
@@ -219,30 +221,32 @@ function getScoreDeltaClass(delta: number) {
 
 function getEmptyReportsTitle(status: ResourceStatus) {
     if (status === 'archived') {
-        return 'No archived reports found';
+        return 'No archived results found';
     }
 
     if (status === 'all') {
-        return 'No reports found';
+        return 'No results found';
     }
 
-    return 'No active reports found';
+    return 'No active results found';
 }
 
 function getEmptyReportsMessage(status: ResourceStatus) {
     if (status === 'archived') {
-        return 'Archived reports will appear here when you archive them.';
+        return 'Archived results will appear here when you archive them.';
     }
 
-    return 'Create a report to start reviewing this project.';
+    return 'Create a result to start reviewing this project.';
 }
 
 function ProjectDetailPage() {
     const { id = '' } = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [project, setProject] = useState<Project | null>(null);
+    const [client, setClient] = useState<Client | null>(null);
     const [reports, setReports] = useState<PaginatedResponse<Report> | null>(null);
     const [reportGroups, setReportGroups] = useState<ReportGroup[]>([]);
     const [reportGroupTrends, setReportGroupTrends] = useState<ReportGroupTrend[]>([]);
@@ -289,10 +293,9 @@ function ProjectDetailPage() {
             setError('');
     
             try {
-                const [projectData, groupData, reportData] = await Promise.all([
-                    getProjectById(id),
-                    getProjectReportGroups(id).catch((): ReportGroup[] => []),
-                    getProjectReports(id, {
+                const projectPromise = getProjectById(id);
+                const groupPromise = getProjectReportGroups(id).catch((): ReportGroup[] => []);
+                const reportPromise = getProjectReports(id, {
                         page,
                         limit,
                         search,
@@ -300,10 +303,19 @@ function ProjectDetailPage() {
                         order,
                         groupId: groupId || undefined,
                         status: status === 'active' ? undefined : status
-                    })
+                    });
+                const projectData = await projectPromise;
+                const clientPromise = projectData.clientId
+                    ? getClientById(projectData.clientId).catch(() => null)
+                    : Promise.resolve(null);
+                const [groupData, reportData, clientData] = await Promise.all([
+                    groupPromise,
+                    reportPromise,
+                    clientPromise
                 ]);
     
                 setProject(projectData);
+                setClient(clientData);
                 setReportGroups(groupData);
                 setReports(reportData);
             } catch (err) {
@@ -371,6 +383,14 @@ function ProjectDetailPage() {
         setSuccessMessage('');
     }, [search, sort, order, groupId, status, page]);
 
+    useEffect(() => {
+        if (!reports || !location.hash.startsWith('#result-')) {
+            return;
+        }
+
+        document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
+    }, [location.hash, reports]);
+
     function setPage(nextPage: number) {
         const params = new URLSearchParams(searchParams);
         params.set('page', String(nextPage));
@@ -408,7 +428,7 @@ function ProjectDetailPage() {
     }
 
     function handleReportCreated() {
-        setSuccessMessage('Report created successfully');
+        setSuccessMessage('Result created successfully');
         setReloadKey((value) => value + 1);
         setCreateReportDialogOpen(false);
     }
@@ -438,7 +458,7 @@ function ProjectDetailPage() {
         });
 
         setEditingReportId(null);
-        setSuccessMessage(`Report updated: ${updatedReport.title}`);
+        setSuccessMessage(`Result updated: ${updatedReport.title}`);
         setReloadKey((value) => value + 1);
     }
 
@@ -446,14 +466,14 @@ function ProjectDetailPage() {
         removeReportFromCurrentList(reportId);
 
         setEditingReportId(null);
-        setSuccessMessage('Report deleted successfully');
+        setSuccessMessage('Result deleted successfully');
         setReloadKey((value) => value + 1);
     }
 
     function handleReportArchived(reportId: string) {
         removeReportFromCurrentList(reportId);
         setEditingReportId(null);
-        setSuccessMessage('Report archived successfully');
+        setSuccessMessage('Result archived successfully');
         setReloadKey((value) => value + 1);
     }
 
@@ -465,7 +485,7 @@ function ProjectDetailPage() {
 
         removeReportFromCurrentList(report.id);
         setEditingReportId(null);
-        setSuccessMessage('Report restored successfully');
+        setSuccessMessage('Result restored successfully');
         setReloadKey((value) => value + 1);
     }
 
@@ -480,10 +500,10 @@ function ProjectDetailPage() {
         const ReportHeading = headingLevel === 4 ? 'h4' : 'h3';
 
         return (
-            <li key={report.id} className='item-card'>
+            <li id={`result-${report.id}`} key={report.id} className='item-card'>
                 {editingReportId === report.id ? (
                     <>
-                        <ReportHeading>Edit report</ReportHeading>
+                        <ReportHeading>Edit result</ReportHeading>
                         <EditReportForm
                             report={report}
                             groups={reportGroups}
@@ -560,9 +580,21 @@ function ProjectDetailPage() {
 
     return (
         <section className='page'>
-            <p>
-                <Link to='/projects'>← Back to projects</Link>
-            </p>
+            {!isLoading && project ? (
+                <nav className='breadcrumbs' aria-label='Breadcrumb'>
+                    {client ? (
+                        <>
+                            <Link to='/clients'>Clients</Link>
+                            <span aria-hidden='true'>/</span>
+                            <Link to={`/clients/${client.id}`}>{client.name}</Link>
+                        </>
+                    ) : (
+                        <Link to='/projects'>Projects</Link>
+                    )}
+                    <span aria-hidden='true'>/</span>
+                    <span aria-current='page'>{project.name}</span>
+                </nav>
+            ) : null}
 
             {isLoading ? (
                 <Loading
@@ -593,7 +625,7 @@ function ProjectDetailPage() {
                         </div>
                         <div className='page-heading__actions'>
                             <button type='button' onClick={() => setCreateReportDialogOpen(true)}>
-                                Create report
+                                Create result
                             </button>
                             <button type='button' onClick={() => setEditProjectDialogOpen(true)}>
                                 Edit project
@@ -602,7 +634,7 @@ function ProjectDetailPage() {
                     </div>
 
                     <ModalDialog
-                        title='Create report'
+                        title='Create result'
                         open={createReportDialogOpen}
                         onClose={() => setCreateReportDialogOpen(false)}
                     >
@@ -641,7 +673,7 @@ function ProjectDetailPage() {
                     ) : null}
 
                     <div className='card'>
-                        <h2>Reports</h2>
+                        <h2>Results</h2>
 
                         <div className='toolbar'>
                             <label>
@@ -685,9 +717,9 @@ function ProjectDetailPage() {
                                         })
                                     }
                                 >
-                                    <option value='active'>Active reports</option>
-                                    <option value='archived'>Archived reports</option>
-                                    <option value='all'>All reports</option>
+                                    <option value='active'>Active results</option>
+                                    <option value='archived'>Archived results</option>
+                                    <option value='all'>All results</option>
                                 </select>
                             </label>
 

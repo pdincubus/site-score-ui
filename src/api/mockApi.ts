@@ -1,5 +1,6 @@
 import type {
     Client,
+    Dashboard,
     PageSpeedStrategy,
     PaginatedResponse,
     Project,
@@ -1168,6 +1169,60 @@ async function mockApiFetch<T>(path: string, options: MockApiFetchOptions = {}):
         return undefined as T;
     }
 
+    if (method === 'GET' && url.pathname === '/dashboard') {
+        const recentClients = clients
+            .filter((client) => !client.archivedAt)
+            .sort((firstClient, secondClient) =>
+                secondClient.createdAt.localeCompare(firstClient.createdAt)
+            )
+            .slice(0, 5)
+            .map(({ id, name, createdAt }) => ({ id, name, createdAt }));
+        const recentProjects = projects
+            .filter((project) => !project.archivedAt)
+            .sort((firstProject, secondProject) =>
+                secondProject.createdAt.localeCompare(firstProject.createdAt)
+            )
+            .slice(0, 5)
+            .map(({ id, name, clientId, createdAt }) => ({
+                id,
+                name,
+                clientId,
+                clientName: clients.find((client) => client.id === clientId)?.name ?? null,
+                createdAt
+            }));
+        const recentResults = reports
+            .filter((report) => {
+                const project = projects.find((item) => item.id === report.projectId);
+
+                return !report.archivedAt && Boolean(project && !project.archivedAt);
+            })
+            .sort((firstReport, secondReport) =>
+                secondReport.createdAt.localeCompare(firstReport.createdAt)
+            )
+            .slice(0, 5)
+            .map((report) => {
+                const project = projects.find((item) => item.id === report.projectId);
+                const client = clients.find((item) => item.id === project?.clientId);
+
+                return {
+                    id: report.id,
+                    title: report.title,
+                    projectId: report.projectId,
+                    projectName: project?.name ?? 'Unknown project',
+                    clientId: project?.clientId ?? null,
+                    clientName: client?.name ?? null,
+                    createdAt: report.createdAt
+                };
+            });
+        const dashboard: Dashboard = {
+            clients: recentClients,
+            projects: recentProjects,
+            results: recentResults
+        };
+
+        return clone(dashboard) as T;
+    }
+
     if (method === 'GET' && url.pathname === '/clients') {
         const page = getPositiveInteger(url.searchParams.get('page'), 1);
         const limit = Math.min(getPositiveInteger(url.searchParams.get('limit'), 10), 50);
@@ -1257,7 +1312,17 @@ async function mockApiFetch<T>(path: string, options: MockApiFetchOptions = {}):
         const page = getPositiveInteger(url.searchParams.get('page'), 1);
         const limit = Math.min(getPositiveInteger(url.searchParams.get('limit'), 10), 50);
         const statusFilteredProjects = filterByStatus(projects, url.searchParams.get('status'));
-        const searchedProjects = searchProjects(statusFilteredProjects, url.searchParams.get('search'));
+        const clientId = url.searchParams.get('clientId');
+        const clientFilteredProjects = statusFilteredProjects.filter((project) => {
+            if (!clientId) {
+                return true;
+            }
+
+            return clientId === 'unassigned'
+                ? project.clientId === null
+                : project.clientId === clientId;
+        });
+        const searchedProjects = searchProjects(clientFilteredProjects, url.searchParams.get('search'));
         const sortedProjects = sortProjects(
             searchedProjects,
             url.searchParams.get('sort'),

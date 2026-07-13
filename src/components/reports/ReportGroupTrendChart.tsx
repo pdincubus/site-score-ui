@@ -100,7 +100,7 @@ function getTrendRange(points: ReportTrendPoint[]) {
         return '';
     }
 
-    return `${points.length} reports from ${formatReportDate(firstPoint.createdAt)} to ${formatReportDate(lastPoint.createdAt)}`;
+    return `${points.length} results from ${formatReportDate(firstPoint.createdAt)} to ${formatReportDate(lastPoint.createdAt)}`;
 }
 
 type ReportGroupTrendChartProps = {
@@ -123,7 +123,7 @@ function ReportGroupTrendChart({ trend }: ReportGroupTrendChartProps) {
                     </div>
                 </div>
                 <p className='report-trend__empty' role='status'>
-                    Add another report to see a trend.
+                    Add another result to see a trend.
                 </p>
             </section>
         );
@@ -226,7 +226,7 @@ function ReportGroupTrendChart({ trend }: ReportGroupTrendChartProps) {
             <table className='vh' aria-label={`Score trend data for ${trend.groupName}`}>
                 <thead>
                     <tr>
-                        <th scope='col'>Report</th>
+                        <th scope='col'>Result</th>
                         <th scope='col'>Date</th>
                         {SCORE_ITEMS.map((score) => (
                             <th key={score.key} scope='col'>

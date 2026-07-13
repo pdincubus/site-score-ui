@@ -7,6 +7,7 @@ import {
     getProjectReportGroupTrends,
     getProjectReports
 } from '../api/projects';
+import { getClientById } from '../api/clients';
 import { ProjectDetailPage } from './ProjectDetailPage';
 import type { PaginatedResponse, Project, Report, ReportGroup, ReportGroupTrend } from '../types/api';
 
@@ -18,6 +19,10 @@ vi.mock('../api/projects', () => ({
     getProjectReportGroups: vi.fn(),
     getProjectReportGroupTrends: vi.fn(),
     getProjectReports: vi.fn()
+}));
+
+vi.mock('../api/clients', () => ({
+    getClientById: vi.fn()
 }));
 
 const project: Project = {
@@ -116,11 +121,18 @@ describe('ProjectDetailPage', () => {
     beforeAll(() => {
         HTMLDialogElement.prototype.showModal = vi.fn();
         HTMLDialogElement.prototype.close = vi.fn();
+        Element.prototype.scrollIntoView = vi.fn();
     });
 
     beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(getProjectById).mockResolvedValue(project);
+        vi.mocked(getClientById).mockResolvedValue({
+            id: 'client-1',
+            name: 'Example client',
+            archivedAt: null,
+            createdAt: '2026-01-01T00:00:00.000Z'
+        });
         vi.mocked(getProjectReportGroups).mockResolvedValue([homepageMobileGroup]);
         vi.mocked(getProjectReportGroupTrends).mockResolvedValue([homepageTrend]);
         vi.mocked(getProjectReports).mockResolvedValue(reportResponse([homepageReport]));
@@ -149,13 +161,36 @@ describe('ProjectDetailPage', () => {
             )
         ).toBeInTheDocument();
         expect(screen.queryByText('Initial PageSpeed snapshot.')).not.toBeInTheDocument();
+        expect(reportCard).toHaveAttribute('id', 'result-report-1');
+    });
+
+    it('shows the client hierarchy and uses results terminology', async () => {
+        renderProjectDetailPage();
+
+        expect(await screen.findByRole('link', { name: 'Example client' })).toHaveAttribute(
+            'href',
+            '/clients/client-1'
+        );
+        expect(screen.getByRole('heading', { level: 2, name: 'Results' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Create result' })).toBeInTheDocument();
+    });
+
+    it('scrolls to a dashboard-linked result after the results load', async () => {
+        renderProjectDetailPage('/projects/project-1#result-report-1');
+
+        const resultHeading = await screen.findByRole('heading', { name: 'Homepage baseline' });
+        const resultCard = resultHeading.closest('li');
+
+        await waitFor(() => {
+            expect(resultCard?.scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
+        });
     });
 
     it('nests report card headings under report group headings in all groups view', async () => {
         renderProjectDetailPage();
 
         expect(await screen.findByRole('heading', { level: 1, name: 'Example Project' })).toBeInTheDocument();
-        expect(screen.getByRole('heading', { level: 2, name: 'Reports' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { level: 2, name: 'Results' })).toBeInTheDocument();
         expect(screen.getByRole('heading', { level: 3, name: 'Homepage mobile' })).toBeInTheDocument();
         expect(screen.getByRole('heading', { level: 4, name: 'Homepage baseline' })).toBeInTheDocument();
         expect(
@@ -167,7 +202,7 @@ describe('ProjectDetailPage', () => {
         renderProjectDetailPage('/projects/project-1?groupId=group-mobile');
 
         expect(await screen.findByRole('heading', { level: 1, name: 'Example Project' })).toBeInTheDocument();
-        expect(screen.getByRole('heading', { level: 2, name: 'Reports' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { level: 2, name: 'Results' })).toBeInTheDocument();
         expect(screen.getByRole('heading', { level: 3, name: 'Homepage mobile' })).toBeInTheDocument();
         expect(screen.getByRole('heading', { level: 4, name: 'Homepage baseline' })).toBeInTheDocument();
         expect(
@@ -292,13 +327,13 @@ describe('ProjectDetailPage', () => {
 
         expect(await screen.findByRole('heading', { name: 'Homepage latest' })).toBeInTheDocument();
         expect(
-            screen.getByLabelText('Performance improved by 4 points from the previous report.')
+            screen.getByLabelText('Performance improved by 4 points from the previous result.')
         ).toHaveTextContent('+4');
         expect(
-            screen.getByLabelText('SEO declined by 2 points from the previous report.')
+            screen.getByLabelText('SEO declined by 2 points from the previous result.')
         ).toHaveTextContent('-2');
         expect(
-            screen.getAllByLabelText('Accessibility did not change from the previous report.')[0]
+            screen.getAllByLabelText('Accessibility did not change from the previous result.')[0]
         ).toHaveTextContent('0');
     });
 
@@ -377,7 +412,7 @@ describe('ProjectDetailPage', () => {
         expect(await screen.findByRole('heading', { name: 'Homepage latest' })).toBeInTheDocument();
         expect(screen.getAllByText('User timings (1)').length).toBeGreaterThan(0);
         expect(
-            screen.getByLabelText('app:hydrate improved by 420 ms compared with the previous report.')
+            screen.getByLabelText('app:hydrate improved by 420 ms compared with the previous result.')
         ).toHaveTextContent('-420 ms');
     });
 
@@ -425,10 +460,10 @@ describe('ProjectDetailPage', () => {
 
         expect(await screen.findByRole('heading', { name: 'Homepage latest' })).toBeInTheDocument();
         expect(
-            screen.getByLabelText('Performance improved by 12 points from the previous report.')
+            screen.getByLabelText('Performance improved by 12 points from the previous result.')
         ).toHaveTextContent('+12');
         expect(
-            screen.getByLabelText('SEO declined by 4 points from the previous report.')
+            screen.getByLabelText('SEO declined by 4 points from the previous result.')
         ).toHaveTextContent('-4');
     });
 });

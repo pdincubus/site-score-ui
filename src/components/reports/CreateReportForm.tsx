@@ -89,12 +89,12 @@ function CreateReportForm({
             : null;
 
         if (isCreatingGroup && !groupValidation?.data) {
-            setError(groupValidation?.error || 'Could not validate report group.');
+            setError(groupValidation?.error || 'Could not validate result group.');
             return;
         }
 
         if (!isCreatingGroup && !nextGroupId) {
-            setError('Choose a report group.');
+            setError('Choose a result group.');
             return;
         }
 
@@ -128,7 +128,7 @@ function CreateReportForm({
 
                 if (!nextGroupId) {
                     throw new Error(
-                        'The report group was created without an id. Refresh and try again.'
+                        'The result group was created without an id. Refresh and try again.'
                     );
                 }
 
@@ -155,7 +155,7 @@ function CreateReportForm({
 
             onCreated(report);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create report');
+            setError(err instanceof Error ? err.message : 'Failed to create result');
         } finally {
             setIsSubmitting(false);
         }
@@ -248,7 +248,7 @@ function CreateReportForm({
     const form = (
         <form onSubmit={handleSubmit} className='form-stack'>
             <fieldset className='report-group-fields'>
-                <legend>Report group</legend>
+                <legend>Result group</legend>
 
                 {groups.length > 0 ? (
                     <label>
@@ -259,7 +259,7 @@ function CreateReportForm({
                             disabled={isSubmitting}
                             required
                         >
-                            <option value=''>Choose a report group</option>
+                            <option value=''>Choose a result group</option>
                             {groups.map((group) => (
                                 <option key={group.id} value={group.id}>
                                     {group.name}
@@ -413,13 +413,13 @@ function CreateReportForm({
             ) : null}
 
             {error ? (
-                <Alert variant='error' title='Could not create report'>
+                <Alert variant='error' title='Could not create result'>
                     {error}
                 </Alert>
             ) : null}
 
             <button type='submit' disabled={isSubmitting}>
-                {isSubmitting ? 'Creating report...' : 'Create report'}
+                {isSubmitting ? 'Creating result...' : 'Create result'}
             </button>
         </form>
     );
@@ -430,7 +430,7 @@ function CreateReportForm({
 
     return (
         <div className='card'>
-            <h2>Create report</h2>
+            <h2>Create result</h2>
             {form}
         </div>
     );

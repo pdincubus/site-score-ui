@@ -98,7 +98,7 @@ function EditReportForm({
 
             onUpdated(updatedReport);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update report');
+            setError(err instanceof Error ? err.message : 'Failed to update result');
         } finally {
             setIsSubmitting(false);
         }
@@ -117,10 +117,10 @@ function EditReportForm({
 
     async function handleDelete() {
         const confirmed = await confirmDialogRef.current?.open({
-            title: 'Delete report',
-            message: 'This report will be permanently deleted.',
-            confirmLabel: 'Delete report',
-            cancelLabel: 'Keep report',
+            title: 'Delete result',
+            message: 'This result will be permanently deleted.',
+            confirmLabel: 'Delete result',
+            cancelLabel: 'Keep result',
             variant: 'danger'
         });
 
@@ -135,7 +135,7 @@ function EditReportForm({
             await deleteReport(report.id);
             onDeleted(report.id);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete report');
+            setError(err instanceof Error ? err.message : 'Failed to delete result');
         } finally {
             setIsDeleting(false);
         }
@@ -143,11 +143,11 @@ function EditReportForm({
 
     async function handleArchiveRestore() {
         const confirmed = await confirmDialogRef.current?.open({
-            title: isArchived ? 'Restore report' : 'Archive report',
+            title: isArchived ? 'Restore result' : 'Archive result',
             message: isArchived
-                ? 'This will restore the report to active report views.'
-                : 'This will move the report out of active report views. You can restore it later.',
-            confirmLabel: isArchived ? 'Restore report' : 'Archive report',
+                ? 'This will restore the result to active result views.'
+                : 'This will move the result out of active result views. You can restore it later.',
+            confirmLabel: isArchived ? 'Restore result' : 'Archive result',
             cancelLabel: 'Cancel'
         });
 
@@ -173,7 +173,7 @@ function EditReportForm({
                 onUpdated(updatedReport);
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update report status');
+            setError(err instanceof Error ? err.message : 'Failed to update result status');
         } finally {
             setIsStatusUpdating(false);
         }
@@ -183,14 +183,14 @@ function EditReportForm({
         <>
             <form onSubmit={handleSubmit} className='form-stack'>
                 <label>
-                    <span>Report group</span>
+                    <span>Result group</span>
                     <select
                         value={groupId}
                         onChange={handleGroupChange}
                         required
                         disabled={isBusy}
                     >
-                        <option value=''>Choose a report group</option>
+                        <option value=''>Choose a result group</option>
                         {groups.map((group) => (
                             <option key={group.id} value={group.id}>
                                 {group.name}
@@ -300,14 +300,14 @@ function EditReportForm({
                 </div>
 
                 {error ? (
-                    <Alert variant='error' title='Could not update report'>
+                    <Alert variant='error' title='Could not update result'>
                         {error}
                     </Alert>
                 ) : null}
 
                 <div className='button-row'>
                     <button type='submit' disabled={isBusy}>
-                        {isSubmitting ? 'Saving changes...' : 'Save report'}
+                        {isSubmitting ? 'Saving changes...' : 'Save result'}
                     </button>
 
                     <button
@@ -319,8 +319,8 @@ function EditReportForm({
                         {isStatusUpdating
                             ? 'Updating status...'
                             : isArchived
-                                ? 'Restore report'
-                                : 'Archive report'}
+                                ? 'Restore result'
+                                : 'Archive result'}
                     </button>
 
                     <button
@@ -329,7 +329,7 @@ function EditReportForm({
                         onClick={handleDelete}
                         disabled={isBusy}
                     >
-                        {isDeleting ? 'Deleting report...' : 'Delete report'}
+                        {isDeleting ? 'Deleting result...' : 'Delete result'}
                     </button>
 
                     <button

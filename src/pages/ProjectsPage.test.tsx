@@ -119,9 +119,9 @@ describe('ProjectsPage', () => {
             })
         );
         expect(projectCard).not.toBeNull();
-        expect(within(projectCard as HTMLElement).getByText('6 reports')).toBeInTheDocument();
+        expect(within(projectCard as HTMLElement).getByText('6 results')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('2 groups')).toBeInTheDocument();
-        expect(within(projectCard as HTMLElement).getByText('Latest report')).toBeInTheDocument();
+        expect(within(projectCard as HTMLElement).getByText('Latest result')).toBeInTheDocument();
         expect(
             within(projectCard as HTMLElement).getByText(
                 new Intl.DateTimeFormat('en-GB', {
@@ -161,9 +161,9 @@ describe('ProjectsPage', () => {
         const projectCard = projectHeading.closest('li');
 
         expect(projectCard).not.toBeNull();
-        expect(within(projectCard as HTMLElement).getByText('0 reports')).toBeInTheDocument();
+        expect(within(projectCard as HTMLElement).getByText('0 results')).toBeInTheDocument();
         expect(within(projectCard as HTMLElement).getByText('0 groups')).toBeInTheDocument();
-        expect(within(projectCard as HTMLElement).getByText('No reports yet')).toBeInTheDocument();
+        expect(within(projectCard as HTMLElement).getByText('No results yet')).toBeInTheDocument();
         expect(
             within(projectCard as HTMLElement).queryByText('Latest average score')
         ).not.toBeInTheDocument();

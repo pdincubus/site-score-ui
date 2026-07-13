@@ -134,9 +134,9 @@ function getRequiredString(value: unknown) {
 
 function assertCreateReportInput(input: CreateReportInput) {
     const requiredStrings: Array<[keyof CreateReportInput, string]> = [
-        ['groupId', 'Choose a report group.'],
-        ['title', 'Enter a report title.'],
-        ['summary', 'Enter a report summary.'],
+        ['groupId', 'Choose a result group.'],
+        ['title', 'Enter a result title.'],
+        ['summary', 'Enter a result summary.'],
         ['pageUrl', 'Enter a page URL.']
     ];
 

@@ -427,19 +427,19 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
                                                         <dd>{formatProjectDate(project.createdAt)}</dd>
                                                     </div>
                                                     <div>
-                                                        <dt>Reports</dt>
-                                                        <dd>{formatCount(summary.reportCount, 'report')}</dd>
+                                                        <dt>Results</dt>
+                                                        <dd>{formatCount(summary.reportCount, 'result')}</dd>
                                                     </div>
                                                     <div>
                                                         <dt>Groups</dt>
                                                         <dd>{formatCount(summary.reportGroupCount, 'group')}</dd>
                                                     </div>
                                                     <div>
-                                                        <dt>Latest report</dt>
+                                                        <dt>Latest result</dt>
                                                         <dd title={summary.latestReportTitle || undefined}>
                                                             {summary.latestReportCreatedAt
                                                                 ? formatProjectDate(summary.latestReportCreatedAt)
-                                                                : 'No reports yet'}
+                                                                : 'No results yet'}
                                                         </dd>
                                                     </div>
                                                     {latestAverageScore === null ? null : (

@@ -112,12 +112,12 @@ function formatMetricDeltaLabel(label: string, metric: ReportInsightMetric, delt
     const absoluteDelta = formatMetricDeltaValue(metric, delta);
 
     if (delta === 0) {
-        return `${label} did not change compared with the previous report.`;
+        return `${label} did not change compared with the previous result.`;
     }
 
     return isMetricImprovement(metric, delta)
-        ? `${label} improved by ${absoluteDelta} compared with the previous report.`
-        : `${label} declined by ${absoluteDelta} compared with the previous report.`;
+        ? `${label} improved by ${absoluteDelta} compared with the previous result.`
+        : `${label} declined by ${absoluteDelta} compared with the previous result.`;
 }
 
 function getMetricDeltaClass(metric: ReportInsightMetric, delta: number) {
@@ -216,18 +216,18 @@ function formatTimingDeltaLabel(timing: ReportInsightUserTiming, delta: number) 
     const absoluteDelta = formatMilliseconds(Math.abs(delta));
 
     if (delta === 0) {
-        return `${timing.name} did not change compared with the previous report.`;
+        return `${timing.name} did not change compared with the previous result.`;
     }
 
     if (timing.entryType === 'mark') {
         return delta < 0
-            ? `${timing.name} happened earlier by ${absoluteDelta} compared with the previous report.`
-            : `${timing.name} happened later by ${absoluteDelta} compared with the previous report.`;
+            ? `${timing.name} happened earlier by ${absoluteDelta} compared with the previous result.`
+            : `${timing.name} happened later by ${absoluteDelta} compared with the previous result.`;
     }
 
     return delta < 0
-        ? `${timing.name} improved by ${absoluteDelta} compared with the previous report.`
-        : `${timing.name} slowed by ${absoluteDelta} compared with the previous report.`;
+        ? `${timing.name} improved by ${absoluteDelta} compared with the previous result.`
+        : `${timing.name} slowed by ${absoluteDelta} compared with the previous result.`;
 }
 
 function getTimingDeltaClass(delta: number) {

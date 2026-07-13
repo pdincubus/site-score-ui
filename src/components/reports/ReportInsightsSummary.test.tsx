@@ -208,13 +208,13 @@ describe('ReportInsightsSummary', () => {
         );
 
         expect(
-            screen.getByLabelText('Page weight improved by 261.1 KiB compared with the previous report.')
+            screen.getByLabelText('Page weight improved by 261.1 KiB compared with the previous result.')
         ).toHaveTextContent('-261.1 KiB');
         expect(
-            screen.getByLabelText('First Contentful Paint declined by 130 ms compared with the previous report.')
+            screen.getByLabelText('First Contentful Paint declined by 130 ms compared with the previous result.')
         ).toHaveTextContent('+130 ms');
         expect(
-            screen.getByLabelText('Total Blocking Time did not change compared with the previous report.')
+            screen.getByLabelText('Total Blocking Time did not change compared with the previous result.')
         ).toHaveTextContent('0 ms');
     });
 
@@ -232,10 +232,10 @@ describe('ReportInsightsSummary', () => {
         expect(screen.getByText('Measure')).toBeInTheDocument();
         expect(screen.getByText('Mark')).toBeInTheDocument();
         expect(
-            screen.getByLabelText('app:hydrate improved by 420 ms compared with the previous report.')
+            screen.getByLabelText('app:hydrate improved by 420 ms compared with the previous result.')
         ).toHaveTextContent('-420 ms');
         expect(
-            screen.getByLabelText('app:ready happened later by 200 ms compared with the previous report.')
+            screen.getByLabelText('app:ready happened later by 200 ms compared with the previous result.')
         ).toHaveTextContent('+200 ms');
     });
 });

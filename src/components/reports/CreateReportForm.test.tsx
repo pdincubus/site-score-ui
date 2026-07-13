@@ -262,7 +262,7 @@ describe('CreateReportForm', () => {
 
         expect(
             await screen.findByText(
-                'The report group was created without an id. Refresh and try again.'
+                'The result group was created without an id. Refresh and try again.'
             )
         ).toBeInTheDocument();
         expect(createReport).not.toHaveBeenCalled();

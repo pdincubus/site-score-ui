@@ -236,7 +236,7 @@ describe('EditReportForm', () => {
             />
         );
 
-        fireEvent.change(screen.getByLabelText('Report group'), {
+        fireEvent.change(screen.getByLabelText('Result group'), {
             target: { value: 'group-desktop' }
         });
 
@@ -271,7 +271,7 @@ describe('EditReportForm', () => {
             />
         );
 
-        expect(screen.getByRole('button', { name: 'Archive report' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Archive result' })).toBeInTheDocument();
 
         rerender(
             <EditReportForm
@@ -286,6 +286,6 @@ describe('EditReportForm', () => {
             />
         );
 
-        expect(screen.getByRole('button', { name: 'Restore report' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Restore result' })).toBeInTheDocument();
     });
 });

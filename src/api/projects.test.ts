@@ -379,7 +379,7 @@ describe('project API helpers', () => {
             seoScore: 90,
             bestPracticesScore: 90,
             agenticBrowsingScore: 90
-        })).toThrow('Choose a report group.');
+        })).toThrow('Choose a result group.');
 
         expect(fetchSpy).not.toHaveBeenCalled();
     });
