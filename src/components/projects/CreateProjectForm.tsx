@@ -12,9 +12,10 @@ import {
 type CreateProjectFormProps = {
     onCreated: (project: Project) => void;
     variant?: 'card' | 'embedded';
+    clientId?: string;
 };
 
-function CreateProjectForm({ onCreated, variant = 'card' }: CreateProjectFormProps) {
+function CreateProjectForm({ onCreated, variant = 'card', clientId }: CreateProjectFormProps) {
     const [name, setName] = useState('');
     const [url, setUrl] = useState('');
     const [error, setError] = useState('');
@@ -37,7 +38,10 @@ function CreateProjectForm({ onCreated, variant = 'card' }: CreateProjectFormPro
         setIsSubmitting(true);
 
         try {
-            const project = await createProject(validation.data);
+            const project = await createProject({
+                ...validation.data,
+                ...(clientId ? { clientId } : {})
+            });
 
             setName('');
             setUrl('');

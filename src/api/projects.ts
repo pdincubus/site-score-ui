@@ -35,6 +35,7 @@ type GetProjectsOptions = {
     sort?: ProjectSort;
     order?: SortOrder;
     status?: ResourceStatus;
+    clientId?: string | 'unassigned';
 };
 
 type ProjectListApiResponse =
@@ -262,6 +263,7 @@ function isAuthError(error: unknown) {
 function canRetryBareProjectList(options: GetProjectsOptions) {
     return (
         options.status === undefined &&
+        options.clientId === undefined &&
         !options.search &&
         (options.page === undefined || normalisePage(options.page) === 1)
     );
@@ -283,7 +285,8 @@ async function getProjects(options: GetProjectsOptions = {}) {
         status:
             options.status === undefined
                 ? undefined
-                : normaliseAllowedValue(options.status, STATUS_OPTIONS, 'active')
+                : normaliseAllowedValue(options.status, STATUS_OPTIONS, 'active'),
+        clientId: options.clientId
     });
 
     try {

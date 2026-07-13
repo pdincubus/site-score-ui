@@ -52,6 +52,35 @@ describe('CreateProjectForm', () => {
         });
     });
 
+    it('creates a project for a preselected client', async () => {
+        vi.mocked(createProject).mockResolvedValue({
+            id: 'project-1',
+            name: 'Client project',
+            url: 'https://client-project.example',
+            clientId: 'client-1',
+            archivedAt: null,
+            createdAt: '2026-01-01T00:00:00.000Z'
+        });
+
+        render(<CreateProjectForm clientId='client-1' onCreated={vi.fn()} />);
+
+        fireEvent.change(screen.getByLabelText('Name'), {
+            target: { value: 'Client project' }
+        });
+        fireEvent.change(screen.getByLabelText('URL'), {
+            target: { value: 'https://client-project.example' }
+        });
+        fireEvent.submit(screen.getByLabelText('Name').closest('form') as HTMLFormElement);
+
+        await waitFor(() => {
+            expect(createProject).toHaveBeenCalledWith({
+                name: 'Client project',
+                url: 'https://client-project.example',
+                clientId: 'client-1'
+            });
+        });
+    });
+
     it('rejects whitespace-only project names before calling the API', async () => {
         render(<CreateProjectForm onCreated={vi.fn()} />);
 

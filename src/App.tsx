@@ -3,6 +3,7 @@ import { AppShell } from './components/layout/AppShell';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { ClientsPage } from './pages/ClientsPage';
+import { ClientDetailPage } from './pages/ClientDetailPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
@@ -36,6 +37,14 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <ClientsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path='/clients/:id'
+                        element={
+                            <ProtectedRoute>
+                                <ClientDetailPage />
                             </ProtectedRoute>
                         }
                     />

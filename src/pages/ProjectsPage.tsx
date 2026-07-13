@@ -6,8 +6,10 @@ import { Alert } from '../components/feedback/Alert';
 import { Loading } from '../components/feedback/Loading';
 import { ModalDialog } from '../components/feedback/ModalDialog';
 import { CreateProjectForm } from '../components/projects/CreateProjectForm';
+import { EditClientForm } from '../components/clients/EditClientForm';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import type {
+    Client,
     PaginatedResponse,
     Project,
     ProjectListItem,
@@ -74,8 +76,14 @@ function getEmptyProjectsMessage(status: ResourceStatus) {
     return 'Try changing your search or create a new project.';
 }
 
-function ProjectsPage() {
-    useDocumentTitle('Projects | Site Score UI');
+type ProjectsPageProps = {
+    client?: Client;
+    onClientUpdated?: (client: Client) => void;
+    onClientDeleted?: () => void;
+};
+
+function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPageProps = {}) {
+    useDocumentTitle(client ? `${client.name} projects | Site Score UI` : 'Projects | Site Score UI');
 
     const [searchParams, setSearchParams] = useSearchParams();
     const [response, setResponse] = useState<PaginatedResponse<ProjectListItem> | null>(null);
@@ -84,6 +92,7 @@ function ProjectsPage() {
     const [successMessage, setSuccessMessage] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [editClientDialogOpen, setEditClientDialogOpen] = useState(false);
     const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
 
     const debouncedSearch = useDebouncedValue(searchInput, 300);
@@ -122,7 +131,8 @@ function ProjectsPage() {
                 search,
                 sort,
                 order,
-                status: status === 'active' ? undefined : status
+                status: status === 'active' ? undefined : status,
+                clientId: client?.id
             });
 
             setResponse(data);
@@ -131,7 +141,7 @@ function ProjectsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [page, limit, search, sort, order, status]);
+    }, [page, limit, search, sort, order, status, client]);
 
     useEffect(() => {
         setSearchInput(search);
@@ -168,14 +178,32 @@ function ProjectsPage() {
 
     return (
         <section className='page'>
+            {client ? (
+                <nav className='breadcrumbs' aria-label='Breadcrumb'>
+                    <Link to='/clients'>Clients</Link>
+                    <span aria-hidden='true'>/</span>
+                    <span aria-current='page'>{client.name}</span>
+                </nav>
+            ) : null}
             <div className='page-heading page-heading--with-actions'>
                 <div>
-                    <h1>Projects</h1>
-                    <p>Browse projects from the Site Score API.</p>
+                    <h1>{client?.name || 'Projects'}</h1>
+                    <p>
+                        {client
+                            ? `Browse projects for ${client.name}.`
+                            : 'Browse projects from the Site Score API.'}
+                    </p>
                 </div>
-                <button type='button' onClick={() => setCreateDialogOpen(true)}>
-                    Create project
-                </button>
+                <div className='page-heading__actions'>
+                    {client ? (
+                        <button type='button' onClick={() => setEditClientDialogOpen(true)}>
+                            Edit client
+                        </button>
+                    ) : null}
+                    <button type='button' onClick={() => setCreateDialogOpen(true)}>
+                        Create project
+                    </button>
+                </div>
             </div>
 
             <ModalDialog
@@ -184,7 +212,32 @@ function ProjectsPage() {
                 onClose={() => setCreateDialogOpen(false)}
             >
                 {createDialogOpen ? (
-                    <CreateProjectForm variant='embedded' onCreated={handleProjectCreated} />
+                    <CreateProjectForm
+                        variant='embedded'
+                        clientId={client?.id}
+                        onCreated={handleProjectCreated}
+                    />
+                ) : null}
+            </ModalDialog>
+
+            <ModalDialog
+                title='Edit client'
+                open={editClientDialogOpen}
+                onClose={() => setEditClientDialogOpen(false)}
+            >
+                {client && editClientDialogOpen ? (
+                    <EditClientForm
+                        client={client}
+                        onUpdated={(updatedClient) => {
+                            onClientUpdated?.(updatedClient);
+                            setEditClientDialogOpen(false);
+                        }}
+                        onDeleted={() => {
+                            onClientDeleted?.();
+                            setEditClientDialogOpen(false);
+                        }}
+                        onCancel={() => setEditClientDialogOpen(false)}
+                    />
                 ) : null}
             </ModalDialog>
 

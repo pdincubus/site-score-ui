@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ORDER_OPTIONS, STATUS_OPTIONS, getClients } from '../api/clients';
 import { normaliseAllowedValue, normaliseLimit, normalisePage } from '../api/query';
 import { CreateClientForm } from '../components/clients/CreateClientForm';
@@ -269,7 +269,9 @@ function ClientsPage() {
                                 {response.data.map((client) => (
                                     <li key={client.id} className='item-card'>
                                         <div className='item-card__header'>
-                                            <h2>{client.name}</h2>
+                                            <h2>
+                                                <Link to={`/clients/${client.id}`}>{client.name}</Link>
+                                            </h2>
                                             <div className='item-card__actions'>
                                                 {client.archivedAt ? (
                                                     <span className='status-pill'>Archived</span>

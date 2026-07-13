@@ -81,6 +81,10 @@ describe('ClientsPage', () => {
             })
         );
         expect(clientCard).not.toBeNull();
+        expect(within(clientCard as HTMLElement).getByRole('link', { name: 'Archived client' })).toHaveAttribute(
+            'href',
+            '/clients/client-archived'
+        );
         expect(within(clientCard as HTMLElement).getAllByText('Archived').length).toBeGreaterThan(0);
     });
 });
