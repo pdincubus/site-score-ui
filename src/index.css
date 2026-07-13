@@ -235,6 +235,26 @@ button:focus-visible {
   color: var(--color-muted-on-dark);
 }
 
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.card-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-block-end: 1rem;
+}
+
+.card-heading h2 {
+  margin: 0;
+}
+
 .card {
   --card-accent-color: var(--color-lime);
 

@@ -21,6 +21,28 @@ export type Client = {
     createdAt: string;
 };
 
+export type DashboardClient = Pick<Client, 'id' | 'name' | 'createdAt'>;
+
+export type DashboardProject = Pick<Project, 'id' | 'name' | 'clientId' | 'createdAt'> & {
+    clientName: string | null;
+};
+
+export type DashboardResult = {
+    id: string;
+    title: string;
+    projectId: string;
+    projectName: string;
+    clientId: string | null;
+    clientName: string | null;
+    createdAt: string;
+};
+
+export type Dashboard = {
+    clients: DashboardClient[];
+    projects: DashboardProject[];
+    results: DashboardResult[];
+};
+
 export type ResourceStatus = 'active' | 'archived' | 'all';
 
 export type ProjectSummaryScores = {

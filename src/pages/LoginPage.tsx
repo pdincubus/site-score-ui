@@ -30,7 +30,7 @@ function LoginPage() {
     }
 
     if (isAuthenticated) {
-        return <Navigate to='/projects' replace />;
+        return <Navigate to='/dashboard' replace />;
     }
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -40,7 +40,7 @@ function LoginPage() {
 
         try {
             await login({ email: email.trim(), password });
-            navigate('/projects');
+            navigate('/dashboard');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed');
         } finally {

@@ -3,6 +3,7 @@ import { AppShell } from './components/layout/AppShell';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { ClientsPage } from './pages/ClientsPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -14,6 +15,14 @@ function App() {
             <AppShell>
                 <Routes>
                     <Route path='/login' element={<LoginPage />} />
+                    <Route
+                        path='/dashboard'
+                        element={
+                            <ProtectedRoute>
+                                <DashboardPage />
+                            </ProtectedRoute>
+                        }
+                    />
                     <Route
                         path='/projects'
                         element={
@@ -38,7 +47,7 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
-                    <Route path='/' element={<Navigate to='/projects' replace />} />
+                    <Route path='/' element={<Navigate to='/dashboard' replace />} />
                     <Route path='*' element={<NotFoundPage />} />
                 </Routes>
             </AppShell>

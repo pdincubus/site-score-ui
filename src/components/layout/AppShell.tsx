@@ -15,7 +15,7 @@ function AppShell({ children }: { children: ReactNode }) {
         <div className='app-shell'>
             <header className='site-header'>
                 <div className='site-header__inner'>
-                    <Link to='/projects' className='site-title'>
+                    <Link to='/dashboard' className='site-title'>
                         Site Score UI
                     </Link>
 
@@ -23,8 +23,9 @@ function AppShell({ children }: { children: ReactNode }) {
                         {isAuthenticated && user ? (
                             <>
                                 <nav className='site-nav' aria-label='Main navigation'>
-                                    <Link to='/projects'>Projects</Link>
+                                    <Link to='/dashboard'>Dashboard</Link>
                                     <Link to='/clients'>Clients</Link>
+                                    <Link to='/projects'>Projects</Link>
                                 </nav>
                                 <span className='user-badge'>{user.email}</span>
                                 <button type='button' onClick={handleLogout}>
