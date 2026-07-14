@@ -9,6 +9,8 @@ This project exists as a companion UI for the API so the data can be browsed and
 - API base URL: `https://site-score-api.onrender.com`
 - API docs: `https://site-score-api.onrender.com/docs`
 
+Production browser requests are proxied through the UI deployment at `/api` so auth cookies stay on the same site as the frontend.
+
 ## Tech stack
 
 - React
@@ -69,7 +71,7 @@ VITE_ENABLE_PAGESPEED_IMPORT=false
 ### `.env.production`
 
 ```env
-VITE_API_BASE_URL=https://site-score-api.onrender.com
+VITE_API_BASE_URL=/api
 VITE_ENABLE_PAGESPEED_IMPORT=false
 ```
 
@@ -138,7 +140,8 @@ The frontend uses cookie-based auth against the API.
 Important details:
 
 - requests use `credentials: 'include'`
-- the API must allow the frontend origin in CORS
+- production browser requests use the `/api` Vercel rewrite to avoid third-party cookies
+- the API must allow the frontend origin in CORS when it is called directly
 - login state is restored by calling `/auth/me` on app load
 
 ## API client notes
@@ -147,6 +150,7 @@ The API client lives in `src/api/client.ts`.
 
 It:
 - reads the base URL from `VITE_API_BASE_URL`
+- routes production calls through `/api` when the configured API base is the Render production API
 - includes cookies with each request
 - parses JSON responses
 - throws a simple error message when the API returns an error
@@ -158,67 +162,3 @@ It:
 - `/projects/:id`
 
 ## Current UI flow
-
-1. Log in
-2. Load current user from the API
-3. Browse paginated projects
-4. Search and sort projects
-5. Open a project detail page
-6. Browse paginated reports for that project
-7. Log out
-
-## Deployment
-
-This frontend is intended to be deployed separately from the API.
-
-A simple deployment target is Vercel.
-
-### Build settings
-
-- Framework preset: `Vite`
-- Build command: `pnpm build`
-- Output directory: `dist`
-
-### Required environment variable
-
-```env
-VITE_API_BASE_URL=https://site-score-api.onrender.com
-```
-
-### Production hardening checklist
-
-Before using this UI for paid work, confirm the API and deployment are aligned with these controls:
-
-- The deployed API origin is listed in the Content Security Policy `connect-src` directive in `vercel.json`.
-- The API allows credentials only from known frontend origins, not wildcard CORS.
-- Session cookies are `httpOnly`, `secure`, and use an appropriate `sameSite` policy.
-- Cookie-authenticated mutation endpoints have CSRF protection.
-- Login and other sensitive endpoints are rate limited.
-- API error responses do not expose stack traces or internal details.
-- Production dependency audits are run before release.
-
-## Current status
-
-This project currently demonstrates:
-
-- React with TypeScript
-- route-based UI structure
-- consuming a separate API
-- cookie-based auth in the browser
-- protected routes
-- paginated list rendering
-- search and sorting controls
-- basic frontend state handling without heavy libraries
-
-## Planned next steps
-
-- Create project form
-- Create report form
-- Edit project flow
-- Edit report flow
-- UI polish for loading, empty, and error states
-- Deploy the frontend to Vercel
-
-## Why this project exists
-
-This project exists to complement the Site Score API and show a realistic frontend consuming authenticated API data in a lightweight React application.
