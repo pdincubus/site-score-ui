@@ -60,6 +60,29 @@ describe('apiFetch', () => {
         });
     });
 
+    it('routes the production Render API base URL through the same-origin proxy', async () => {
+        vi.resetModules();
+        vi.stubEnv('PROD', true);
+        vi.stubEnv('VITE_API_BASE_URL', 'https://site-score-api.onrender.com');
+
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify({ ok: true }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' }
+            })
+        );
+        const { apiFetch: productionApiFetch } = await import('./client');
+
+        await productionApiFetch('/auth/me');
+
+        expect(fetchSpy).toHaveBeenCalledWith(
+            '/api/auth/me',
+            expect.objectContaining({
+                credentials: 'include'
+            })
+        );
+    });
+
     it('throws a clear error when VITE_API_BASE_URL is missing', async () => {
         vi.resetModules();
         vi.stubEnv('VITE_API_BASE_URL', '');
