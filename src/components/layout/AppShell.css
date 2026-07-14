@@ -1,3 +1,7 @@
+.pagination:has(> button:first-child:disabled):has(> button:last-child:disabled) {
+    display: none;
+}
+
 @media (max-width: 640px) {
     .site-header__inner {
         display: grid;
@@ -48,5 +52,30 @@
         font-size: 0.72rem;
         line-height: 1;
         box-shadow: none;
+    }
+
+    .pagination {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .pagination button {
+        flex: 0 0 auto;
+        min-height: 2rem;
+        padding: 0.35rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        line-height: 1;
+        box-shadow: none;
+    }
+
+    .pagination span {
+        flex: 0 1 auto;
+        min-width: max-content;
+        font-size: 0.82rem;
+        text-align: center;
+        white-space: nowrap;
     }
 }
