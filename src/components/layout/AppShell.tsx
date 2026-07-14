@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from '../../context/useAuth';
+import './AppShell.css';
 
 function AppShell({ children }: { children: ReactNode }) {
     const { user, isAuthenticated, logout } = useAuth();
@@ -28,7 +29,11 @@ function AppShell({ children }: { children: ReactNode }) {
                                     <Link to='/projects'>Projects</Link>
                                 </nav>
                                 <span className='user-badge'>{user.email}</span>
-                                <button type='button' onClick={handleLogout}>
+                                <button
+                                    className='site-header__logout'
+                                    type='button'
+                                    onClick={handleLogout}
+                                >
                                     Log out
                                 </button>
                             </>
