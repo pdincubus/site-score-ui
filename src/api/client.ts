@@ -1,7 +1,14 @@
 import { mockApiFetch } from './mockApi';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const NORMALIZED_API_BASE_URL = API_BASE_URL?.replace(/\/+$/, '');
+const CONFIGURED_API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+const RENDER_API_BASE_URL = 'https://site-score-api.onrender.com';
+const PRODUCTION_API_PROXY_PATH = '/api';
+const API_BASE_URL =
+    import.meta.env.PROD &&
+    (!CONFIGURED_API_BASE_URL || CONFIGURED_API_BASE_URL.replace(/\/+$/, '') === RENDER_API_BASE_URL)
+        ? PRODUCTION_API_PROXY_PATH
+        : CONFIGURED_API_BASE_URL;
+const NORMALIZED_API_BASE_URL = API_BASE_URL.replace(/\/+$/, '');
 const MOCK_API_PATH = '/mock-api';
 
 let onUnauthorizedHandler: (() => void) | null = null;
@@ -28,7 +35,7 @@ class ApiRequestError extends Error {
 function isMockApiEnabled() {
     return (
         NORMALIZED_API_BASE_URL === MOCK_API_PATH ||
-        NORMALIZED_API_BASE_URL?.endsWith(MOCK_API_PATH)
+        NORMALIZED_API_BASE_URL.endsWith(MOCK_API_PATH)
     );
 }
 
