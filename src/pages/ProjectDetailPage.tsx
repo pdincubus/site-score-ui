@@ -585,13 +585,13 @@ function ProjectDetailPage() {
                     {client ? (
                         <>
                             <Link to='/clients'>Clients</Link>
-                            <span aria-hidden='true'>/</span>
+                            <span className='breadcrumbs__separator' aria-hidden='true'>›</span>
                             <Link to={`/clients/${client.id}`}>{client.name}</Link>
                         </>
                     ) : (
                         <Link to='/projects'>Projects</Link>
                     )}
-                    <span aria-hidden='true'>/</span>
+                    <span className='breadcrumbs__separator' aria-hidden='true'>›</span>
                     <span aria-current='page'>{project.name}</span>
                 </nav>
             ) : null}

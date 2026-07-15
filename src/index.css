@@ -179,10 +179,17 @@ button:focus-visible {
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  column-gap: 0.45rem;
+  row-gap: 0.2rem;
   align-items: center;
   color: var(--color-muted-on-dark);
   font-size: 0.9rem;
+}
+
+.breadcrumbs__separator {
+  color: var(--color-lime);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .page-heading {

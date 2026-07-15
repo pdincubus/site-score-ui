@@ -221,7 +221,7 @@ function ProjectsPage({ client, onClientUpdated, onClientDeleted }: ProjectsPage
             {client ? (
                 <nav className='breadcrumbs' aria-label='Breadcrumb'>
                     <Link to='/clients'>Clients</Link>
-                    <span aria-hidden='true'>/</span>
+                    <span className='breadcrumbs__separator' aria-hidden='true'>›</span>
                     <span aria-current='page'>{client.name}</span>
                 </nav>
             ) : null}
