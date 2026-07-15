@@ -3,6 +3,7 @@ import type {
     ReportInsightMetric,
     ReportInsightMetricName,
     ReportInsightOpportunity,
+    ReportInsightResourceSummaryItem,
     ReportInsightUserTiming,
     ReportInsightUserTimingComparison,
     ReportInsights
@@ -52,6 +53,10 @@ function formatBytes(value: number) {
     }
 
     return `${size.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function formatInteger(value: number) {
+    return new Intl.NumberFormat('en-GB').format(value);
 }
 
 function formatMetric(metric: ReportInsightMetric, key: ReportInsightMetricName) {
@@ -165,6 +170,10 @@ function formatOpportunity(opportunity: ReportInsightOpportunity) {
     }
 
     return `${opportunity.title} (${opportunity.displayValue})`;
+}
+
+function getResourceSummaryItems(items: ReportInsightResourceSummaryItem[] | undefined) {
+    return items?.filter((item) => item.transferSize > 0 || item.requestCount > 0) ?? [];
 }
 
 function formatAuditCategory(category: string) {
@@ -301,6 +310,10 @@ function ReportInsightsSummary({
             }
         ];
     });
+    const domSize = typeof insights.domSize?.totalElements === 'number'
+        ? insights.domSize
+        : null;
+    const resourceSummaryItems = getResourceSummaryItems(insights.resourceSummary?.items);
 
     const visibleOpportunities = insights.opportunities;
     const visibleAudits = insights.auditRefs ?? [];
@@ -317,7 +330,7 @@ function ReportInsightsSummary({
             className={`report-insights report-insights--${tone}`}
             aria-label='Imported PageSpeed data'
         >
-            {visibleMetrics.length > 0 ? (
+            {visibleMetrics.length > 0 || domSize ? (
                 <dl className='report-insights__metrics'>
                     {visibleMetrics.map(({ key, label, metric, previousMetric }) => {
                         const delta = getMetricComparison(metric, previousMetric);
@@ -341,6 +354,16 @@ function ReportInsightsSummary({
                             </div>
                         );
                     })}
+                    {domSize ? (
+                        <div>
+                            <dt>DOM nodes</dt>
+                            <dd>
+                                <span className='report-insights__metric-value'>
+                                    {formatInteger(domSize.totalElements ?? 0)}
+                                </span>
+                            </dd>
+                        </div>
+                    ) : null}
                 </dl>
             ) : null}
 
@@ -353,6 +376,30 @@ function ReportInsightsSummary({
                         </div>
                     ))}
                 </dl>
+            ) : null}
+
+            {resourceSummaryItems.length > 0 ? (
+                <details className='report-insights__details'>
+                    <summary>Payload breakdown ({resourceSummaryItems.length})</summary>
+                    <table className='report-insights__resource-table'>
+                        <thead>
+                            <tr>
+                                <th scope='col'>Resource</th>
+                                <th scope='col'>Size</th>
+                                <th scope='col'>Requests</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {resourceSummaryItems.map((item) => (
+                                <tr key={item.resourceType}>
+                                    <th scope='row'>{item.label}</th>
+                                    <td>{formatBytes(item.transferSize)}</td>
+                                    <td>{formatInteger(item.requestCount)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </details>
             ) : null}
 
             {visibleOpportunities.length > 0 ? (

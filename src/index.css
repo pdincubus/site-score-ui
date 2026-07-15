@@ -545,6 +545,47 @@ button:hover:not(:disabled) {
   color: #bba7ff;
 }
 
+.report-technical-trend__metric {
+  display: grid;
+  gap: 0.35rem;
+  min-width: min(100%, 12rem);
+  color: var(--color-muted-on-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.report-technical-trend__metric select {
+  width: 100%;
+  min-height: 2.4rem;
+  border: 1px solid var(--color-dark-border-strong);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  background: var(--color-white);
+  color: var(--color-primary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.report-technical-trend__series {
+  color: var(--color-lime);
+}
+
+.report-technical-trend__series path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.report-technical-trend__series circle {
+  fill: var(--color-primary);
+  stroke: currentColor;
+  stroke-width: 2.5;
+}
+
 .item-list {
   list-style: none;
   padding: 0;
@@ -1004,6 +1045,29 @@ button:hover:not(:disabled) {
   padding-left: 1.25rem;
 }
 
+.report-insights__resource-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--color-muted-on-dark);
+  font-size: 0.85rem;
+}
+
+.report-insights__resource-table th,
+.report-insights__resource-table td {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--color-faint-on-dark);
+  text-align: left;
+}
+
+.report-insights__resource-table th {
+  color: var(--color-white);
+  font-weight: 700;
+}
+
+.report-insights__resource-table td {
+  font-family: Monaco, Menlo, "Ubuntu Mono", monospace;
+}
+
 .report-insights__audit-list,
 .report-insights__timing-list {
   display: grid;
@@ -1148,7 +1212,8 @@ button:hover:not(:disabled) {
 .report-insights--light .report-insights__meta dd,
 .report-insights--light .report-insights__category,
 .report-insights--light .report-insights__audit-value,
-.report-insights--light .report-insights__timing-value {
+.report-insights--light .report-insights__timing-value,
+.report-insights--light .report-insights__resource-table {
   color: #5d536b;
 }
 
@@ -1157,8 +1222,14 @@ button:hover:not(:disabled) {
 }
 
 .report-insights--light .report-insights__details summary,
-.report-insights--light .report-insights__timing-name {
+.report-insights--light .report-insights__timing-name,
+.report-insights--light .report-insights__resource-table th {
   color: var(--color-primary);
+}
+
+.report-insights--light .report-insights__resource-table th,
+.report-insights--light .report-insights__resource-table td {
+  border-bottom-color: var(--color-cool-border);
 }
 
 .report-insights--light .report-insights__severity {

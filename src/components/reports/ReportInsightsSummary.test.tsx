@@ -44,6 +44,34 @@ const insights: ReportInsights = {
             displayValue: '2.6 s'
         }
     },
+    resourceSummary: {
+        items: [
+            {
+                resourceType: 'total',
+                label: 'Total',
+                requestCount: 24,
+                transferSize: 1732608
+            },
+            {
+                resourceType: 'script',
+                label: 'JavaScript',
+                requestCount: 5,
+                transferSize: 612448
+            },
+            {
+                resourceType: 'image',
+                label: 'Images',
+                requestCount: 8,
+                transferSize: 874320
+            }
+        ]
+    },
+    domSize: {
+        totalElements: 932,
+        maxDepth: 17,
+        maxChildElements: 42,
+        displayValue: '932 elements'
+    },
     opportunities: [
         {
             id: 'render-blocking-resources',
@@ -137,8 +165,13 @@ describe('ReportInsightsSummary', () => {
         expect(screen.getByText('Lighthouse')).toBeInTheDocument();
         expect(screen.getByText('13.0.0')).toBeInTheDocument();
         expect(screen.getByText('Page weight')).toBeInTheDocument();
-        expect(screen.getByText('1.7 MiB')).toBeInTheDocument();
+        expect(screen.getAllByText('1.7 MiB')).toHaveLength(2);
         expect(screen.queryByText('Total size was 1.7 MiB')).not.toBeInTheDocument();
+        expect(screen.getByText('DOM nodes')).toBeInTheDocument();
+        expect(screen.getByText('932')).toBeInTheDocument();
+        expect(screen.getByText('Payload breakdown (3)')).toBeInTheDocument();
+        expect(screen.getByRole('row', { name: /JavaScript/ })).toHaveTextContent('598.1 KiB');
+        expect(screen.getByRole('row', { name: /JavaScript/ })).toHaveTextContent('5');
         expect(screen.getByText('First Contentful Paint')).toBeInTheDocument();
         expect(screen.getByText('Speed Index')).toBeInTheDocument();
         expect(screen.getByText('Total Blocking Time')).toBeInTheDocument();

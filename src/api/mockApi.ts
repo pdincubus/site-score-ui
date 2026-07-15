@@ -201,6 +201,69 @@ function metric(
     };
 }
 
+function createResourceSummary(pageWeight: ReportInsightMetric, strategy: PageSpeedStrategy) {
+    const total = pageWeight.value ?? 0;
+    const documentSize = strategy === 'desktop' ? 38432 : 48256;
+    const stylesheetSize = strategy === 'desktop' ? 62312 : 84320;
+    const scriptSize = Math.round(total * (strategy === 'desktop' ? 0.2 : 0.33));
+    const fontSize = strategy === 'desktop' ? 96000 : 128000;
+    const imageSize = Math.max(total - documentSize - stylesheetSize - scriptSize - fontSize, 0);
+
+    return {
+        items: [
+            {
+                resourceType: 'total',
+                label: 'Total',
+                requestCount: strategy === 'desktop' ? 18 : 24,
+                transferSize: total
+            },
+            {
+                resourceType: 'document',
+                label: 'HTML',
+                requestCount: 1,
+                transferSize: documentSize
+            },
+            {
+                resourceType: 'stylesheet',
+                label: 'CSS',
+                requestCount: strategy === 'desktop' ? 2 : 3,
+                transferSize: stylesheetSize
+            },
+            {
+                resourceType: 'script',
+                label: 'JavaScript',
+                requestCount: strategy === 'desktop' ? 4 : 5,
+                transferSize: scriptSize
+            },
+            {
+                resourceType: 'image',
+                label: 'Images',
+                requestCount: strategy === 'desktop' ? 6 : 8,
+                transferSize: imageSize
+            },
+            {
+                resourceType: 'font',
+                label: 'Fonts',
+                requestCount: 2,
+                transferSize: fontSize
+            }
+        ]
+    } satisfies ReportInsights['resourceSummary'];
+}
+
+function createDomSize(pageWeight: ReportInsightMetric, strategy: PageSpeedStrategy) {
+    const totalElements = Math.round(
+        (strategy === 'desktop' ? 800 : 900) + ((pageWeight.value ?? 0) / 100000)
+    );
+
+    return {
+        totalElements,
+        maxDepth: strategy === 'desktop' ? 15 : 17,
+        maxChildElements: strategy === 'desktop' ? 36 : 42,
+        displayValue: `${totalElements.toLocaleString('en-GB')} elements`
+    } satisfies ReportInsights['domSize'];
+}
+
 function createInsights({
     strategy,
     testedUrl,
@@ -258,6 +321,8 @@ function createInsights({
             timeToInteractive,
             interactionToNextPaint
         },
+        resourceSummary: createResourceSummary(pageWeight, strategy),
+        domSize: createDomSize(pageWeight, strategy),
         opportunities,
         auditRefs,
         userTimings
@@ -1084,6 +1149,19 @@ function getReports(projectId: string, searchParams: URLSearchParams) {
 }
 
 function toTrendPoint(report: Report): ReportTrendPoint {
+    const pageWeight = report.insights?.metrics.pageWeight;
+    const pageWeightBytes = pageWeight?.unit === 'bytes' ? pageWeight.value : null;
+    const domNodes = report.insights?.domSize?.totalElements ?? null;
+    const resources = report.insights?.resourceSummary?.items ?? [];
+    const technicalMetrics =
+        pageWeightBytes === null && domNodes === null && resources.length === 0
+            ? undefined
+            : {
+                pageWeightBytes,
+                domNodes,
+                resources
+            };
+
     return {
         id: report.id,
         title: report.title,
@@ -1093,7 +1171,8 @@ function toTrendPoint(report: Report): ReportTrendPoint {
         accessibilityScore: report.accessibilityScore,
         seoScore: report.seoScore,
         bestPracticesScore: report.bestPracticesScore,
-        agenticBrowsingScore: report.agenticBrowsingScore
+        agenticBrowsingScore: report.agenticBrowsingScore,
+        ...(technicalMetrics ? { technicalMetrics } : {})
     };
 }
 

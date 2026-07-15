@@ -2,9 +2,13 @@ import type {
     PageSpeedStrategy,
     ReportInsightAuditRef,
     ReportInsightAuditSeverity,
+    ReportInsightDomSize,
     ReportInsightMetric,
     ReportInsightMetricName,
     ReportInsightOpportunity,
+    ReportInsightResourceSummary,
+    ReportInsightResourceSummaryItem,
+    ReportInsightResourceType,
     ReportInsights,
     ReportInsightsSource,
     ReportInsightUserTiming,
@@ -27,6 +31,18 @@ const REPORT_INSIGHT_METRIC_UNITS: Array<ReportInsightMetric['unit']> = [
     'score',
     'unitless',
     'bytes'
+];
+
+const REPORT_INSIGHT_RESOURCE_TYPES: ReportInsightResourceType[] = [
+    'total',
+    'document',
+    'stylesheet',
+    'script',
+    'image',
+    'media',
+    'font',
+    'other',
+    'third-party'
 ];
 
 const REPORT_INSIGHT_SOURCES: ReportInsightsSource[] = ['PAGESPEED', 'CRUX'];
@@ -215,6 +231,59 @@ function normaliseMetrics(value: unknown): ReportInsights['metrics'] {
     );
 }
 
+function normaliseResourceSummaryItem(value: unknown): ReportInsightResourceSummaryItem | null {
+    if (
+        !isRecord(value) ||
+        !REPORT_INSIGHT_RESOURCE_TYPES.includes(value.resourceType as ReportInsightResourceType)
+    ) {
+        return null;
+    }
+
+    const label = normaliseRequiredText(value.label, 80);
+    const requestCount = normaliseNonNegativeNumber(value.requestCount);
+    const transferSize = normaliseNonNegativeNumber(value.transferSize);
+
+    if (!label || requestCount === null || transferSize === null) {
+        return null;
+    }
+
+    return {
+        resourceType: value.resourceType as ReportInsightResourceType,
+        label,
+        requestCount: Math.round(requestCount),
+        transferSize
+    };
+}
+
+function normaliseResourceSummary(value: unknown): ReportInsightResourceSummary | null {
+    if (!isRecord(value)) {
+        return null;
+    }
+
+    const items = normaliseList(value.items, normaliseResourceSummaryItem, 12);
+
+    return items.length > 0 ? { items } : null;
+}
+
+function normaliseNullableInteger(value: unknown) {
+    const numberValue = normaliseNonNegativeNumber(value);
+
+    return numberValue === null ? null : Math.round(numberValue);
+}
+
+function normaliseDomSize(value: unknown): ReportInsightDomSize | null {
+    if (!isRecord(value)) {
+        return null;
+    }
+
+    return {
+        totalElements: normaliseNullableInteger(value.totalElements),
+        maxDepth: normaliseNullableInteger(value.maxDepth),
+        maxChildElements: normaliseNullableInteger(value.maxChildElements),
+        displayValue: normaliseNullableText(value.displayValue, 120)
+    };
+}
+
 function normaliseFieldData(value: unknown): ReportInsights['fieldData'] {
     if (
         !isRecord(value) ||
@@ -356,6 +425,14 @@ function normaliseReportInsights(
 
     if (hasOwnProperty(insightRecord, 'fieldData')) {
         normalisedInsights.fieldData = normaliseFieldData(insightRecord.fieldData);
+    }
+
+    if (hasOwnProperty(insightRecord, 'resourceSummary')) {
+        normalisedInsights.resourceSummary = normaliseResourceSummary(insightRecord.resourceSummary);
+    }
+
+    if (hasOwnProperty(insightRecord, 'domSize')) {
+        normalisedInsights.domSize = normaliseDomSize(insightRecord.domSize);
     }
 
     if (Array.isArray(insightRecord.auditRefs)) {

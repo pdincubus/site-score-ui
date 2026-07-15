@@ -19,6 +19,7 @@ import { CreateReportForm } from '../components/reports/CreateReportForm';
 import { EditReportForm } from '../components/reports/EditReportForm';
 import { ReportGroupTrendChart } from '../components/reports/ReportGroupTrendChart';
 import { ReportInsightsSummary } from '../components/reports/ReportInsightsSummary';
+import { ReportTechnicalTrendChart } from '../components/reports/ReportTechnicalTrendChart';
 import { SCORE_ITEMS, type ScoreKey } from '../components/reports/reportScores';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
@@ -766,7 +767,10 @@ function ProjectDetailPage() {
                                             <section key={section.key} className='report-group-section'>
                                                 <h3>{section.name}</h3>
                                                 {shouldShowReportTrends && trend ? (
-                                                    <ReportGroupTrendChart trend={trend} />
+                                                    <>
+                                                        <ReportGroupTrendChart trend={trend} />
+                                                        <ReportTechnicalTrendChart trend={trend} />
+                                                    </>
                                                 ) : null}
                                                 <ul className='item-list'>
                                                     {section.reports.map((report) =>

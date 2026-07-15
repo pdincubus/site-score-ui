@@ -96,6 +96,35 @@ export type ReportInsightMetric = {
     category?: string | null;
 };
 
+export type ReportInsightResourceType =
+    | 'total'
+    | 'document'
+    | 'stylesheet'
+    | 'script'
+    | 'image'
+    | 'media'
+    | 'font'
+    | 'other'
+    | 'third-party';
+
+export type ReportInsightResourceSummaryItem = {
+    resourceType: ReportInsightResourceType;
+    label: string;
+    requestCount: number;
+    transferSize: number;
+};
+
+export type ReportInsightResourceSummary = {
+    items: ReportInsightResourceSummaryItem[];
+};
+
+export type ReportInsightDomSize = {
+    totalElements: number | null;
+    maxDepth: number | null;
+    maxChildElements: number | null;
+    displayValue: string | null;
+};
+
 export type ReportInsightOpportunity = {
     id: string;
     title: string;
@@ -156,6 +185,8 @@ export type ReportInsights = {
         overallCategory: string | null;
         metrics: Partial<Record<ReportInsightMetricName, ReportInsightMetric>>;
     } | null;
+    resourceSummary?: ReportInsightResourceSummary | null;
+    domSize?: ReportInsightDomSize | null;
     opportunities: ReportInsightOpportunity[];
     auditRefs?: ReportInsightAuditRef[];
     userTimings?: ReportInsightUserTiming[];
@@ -188,6 +219,11 @@ export type ReportTrendPoint = {
     seoScore: number;
     bestPracticesScore: number;
     agenticBrowsingScore: number;
+    technicalMetrics?: {
+        pageWeightBytes: number | null;
+        domNodes: number | null;
+        resources: ReportInsightResourceSummaryItem[];
+    };
 };
 
 export type ReportGroupTrend = {
