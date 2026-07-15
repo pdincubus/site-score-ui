@@ -21,7 +21,7 @@ const insights: ReportInsights = {
         pageWeight: {
             value: 1732608,
             unit: 'bytes',
-            displayValue: null
+            displayValue: 'Total size was 1.7 MiB'
         },
         firstContentfulPaint: {
             value: 1230,
@@ -138,6 +138,7 @@ describe('ReportInsightsSummary', () => {
         expect(screen.getByText('13.0.0')).toBeInTheDocument();
         expect(screen.getByText('Page weight')).toBeInTheDocument();
         expect(screen.getByText('1.7 MiB')).toBeInTheDocument();
+        expect(screen.queryByText('Total size was 1.7 MiB')).not.toBeInTheDocument();
         expect(screen.getByText('First Contentful Paint')).toBeInTheDocument();
         expect(screen.getByText('Speed Index')).toBeInTheDocument();
         expect(screen.getByText('Total Blocking Time')).toBeInTheDocument();

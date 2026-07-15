@@ -54,8 +54,12 @@ function formatBytes(value: number) {
     return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
-function formatMetric(metric: ReportInsightMetric) {
+function formatMetric(metric: ReportInsightMetric, key: ReportInsightMetricName) {
     if (metric.displayValue) {
+        if (key === 'pageWeight') {
+            return metric.displayValue.replace(/^Total size was\s+/i, '');
+        }
+
         return metric.displayValue;
     }
 
@@ -323,7 +327,7 @@ function ReportInsightsSummary({
                                 <dt>{label}</dt>
                                 <dd>
                                     <span className='report-insights__metric-value'>
-                                        {formatMetric(metric)}
+                                        {formatMetric(metric, key)}
                                     </span>
                                     {delta === null ? null : (
                                         <span
